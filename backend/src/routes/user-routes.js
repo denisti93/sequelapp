@@ -27,7 +27,11 @@ export async function userRoutes(fastify) {
       totalAssists: user.totalAssists,
       totalWins: user.totalWins,
       totalDraws: user.totalDraws,
-      totalLosses: user.totalLosses
+      totalLosses: user.totalLosses,
+      totalCraquePoints: user.totalCraquePoints || 0,
+      totalCraqueFirstPlaces: user.totalCraqueFirstPlaces || 0,
+      totalCraqueSecondPlaces: user.totalCraqueSecondPlaces || 0,
+      totalCraqueThirdPlaces: user.totalCraqueThirdPlaces || 0
     }));
   });
 

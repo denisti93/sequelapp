@@ -37,11 +37,26 @@
   gap: 8px;
 }
 
+.selected-players-box {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  background: #fff;
+}
+
+.selected-players-box .mat-mdc-chip-set {
+  margin-top: 6px;
+}
+
 .results-grid,
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 10px;
+}
+
+.small-number-field {
+  max-width: 130px;
 }
 
 .result-card,
@@ -56,6 +71,7 @@
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+  margin-bottom: 12px;
 }
 
 .craque-layout {
@@ -63,6 +79,11 @@
   grid-template-columns: 1.3fr 1fr;
   gap: 12px;
   margin-bottom: 12px;
+  margin-top: 4px;
+}
+
+.craque-layout.admin-only-podium {
+  grid-template-columns: 1fr;
 }
 
 .craque-vote-box,
@@ -192,6 +213,12 @@
   display: flex;
   gap: 8px;
   align-items: center;
+  justify-content: flex-end;
+}
+
+.compact-note-field {
+  width: 84px;
+  min-width: 84px;
 }
 
 h3 {
@@ -230,13 +257,15 @@ h3 {
   .vote-edit-actions {
     width: 100%;
     justify-content: space-between;
+    flex-wrap: wrap;
   }
 
-  .vote-edit-actions mat-form-field {
-    width: 100%;
+  .vote-edit-actions .compact-note-field {
+    width: 92px;
+    min-width: 92px;
   }
 
   .vote-edit-actions button {
-    width: 100%;
+    min-width: 88px;
   }
 }

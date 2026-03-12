@@ -57,6 +57,22 @@ const userSchema = new mongoose.Schema(
     totalLosses: {
       type: Number,
       default: 0
+    },
+    totalCraquePoints: {
+      type: Number,
+      default: 0
+    },
+    totalCraqueFirstPlaces: {
+      type: Number,
+      default: 0
+    },
+    totalCraqueSecondPlaces: {
+      type: Number,
+      default: 0
+    },
+    totalCraqueThirdPlaces: {
+      type: Number,
+      default: 0
     }
   },
   {

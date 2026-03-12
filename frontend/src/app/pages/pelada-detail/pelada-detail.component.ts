@@ -247,6 +247,16 @@ export class PeladaDetailComponent implements OnInit {
     }
   }
 
+  getSelectedPlayersForTeam(teamIndex: number): string[] {
+    const selectedIds = this.getTeamPlayerIds(teamIndex);
+    const usersById = new Map(this.users.map((user) => [user.id, user]));
+
+    return selectedIds
+      .map((userId) => usersById.get(userId)?.name)
+      .filter((name): name is string => Boolean(name))
+      .sort((a, b) => a.localeCompare(b));
+  }
+
   private buildResultsForm(pelada: PeladaDetail): void {
     this.resultsArray.clear();
 

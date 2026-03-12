@@ -10,7 +10,7 @@
 
   @if (pelada) {
     <section class="panel">
-      <h2 class="panel-title">Racha de {{ pelada.date | date : 'dd/MM/yyyy' }}</h2>
+      <h2 class="panel-title">Racha de {{ pelada.date | date : 'dd/MM/yyyy' : 'UTC' }}</h2>
       <div class="summary-row">
         <span class="status-chip" [class.success]="pelada.happened">
           {{ pelada.happened ? 'Aconteceu' : 'Vai acontecer' }}
@@ -71,11 +71,20 @@
                   <mat-select formControlName="players" multiple (selectionChange)="onTeamPlayersChanged(i)">
                     @for (user of users; track user.id) {
                       <mat-option [value]="user.id" [disabled]="isPlayerUnavailableForTeam(user.id, i)">
-                        {{ user.name }} (&#64;{{ user.username }})
+                        {{ user.name }}
                       </mat-option>
                     }
                   </mat-select>
                 </mat-form-field>
+
+                <div class="selected-players-box">
+                  <small class="muted">Selecionados:</small>
+                  <mat-chip-set>
+                    @for (name of getSelectedPlayersForTeam(i); track name) {
+                      <mat-chip>{{ name }}</mat-chip>
+                    }
+                  </mat-chip-set>
+                </div>
 
                 <mat-form-field appearance="outline">
                   <mat-label>Goleiros (separados por virgula)</mat-label>
@@ -103,17 +112,17 @@
                 <h3>{{ resultCtrl.get('teamName')?.value }}</h3>
 
                 <div class="form-grid">
-                  <mat-form-field appearance="outline">
+                  <mat-form-field appearance="outline" class="small-number-field">
                     <mat-label>Vitorias</mat-label>
                     <input matInput type="number" min="0" formControlName="wins" />
                   </mat-form-field>
 
-                  <mat-form-field appearance="outline">
+                  <mat-form-field appearance="outline" class="small-number-field">
                     <mat-label>Empates</mat-label>
                     <input matInput type="number" min="0" formControlName="draws" />
                   </mat-form-field>
 
-                  <mat-form-field appearance="outline">
+                  <mat-form-field appearance="outline" class="small-number-field">
                     <mat-label>Derrotas</mat-label>
                     <input matInput type="number" min="0" formControlName="losses" />
                   </mat-form-field>
@@ -140,12 +149,12 @@
                 <h3>{{ statCtrl.get('playerName')?.value }}</h3>
 
                 <div class="form-grid">
-                  <mat-form-field appearance="outline">
+                  <mat-form-field appearance="outline" class="small-number-field">
                     <mat-label>Gols</mat-label>
                     <input matInput type="number" min="0" formControlName="goals" />
                   </mat-form-field>
 
-                  <mat-form-field appearance="outline">
+                  <mat-form-field appearance="outline" class="small-number-field">
                     <mat-label>Assistencias</mat-label>
                     <input matInput type="number" min="0" formControlName="assists" />
                   </mat-form-field>
@@ -168,12 +177,26 @@
         <h2 class="panel-title">Notas dos jogadores</h2>
         @if (authService.isAdmin) {
           <div class="form-actions">
-            <button mat-stroked-button color="primary" (click)="openVoting()" [disabled]="actionLoading || isConcluded">
-              ABRIR PARA NOTAS
-            </button>
-            <button mat-stroked-button color="warn" (click)="finishVoting()" [disabled]="actionLoading || isConcluded">
-              Finalizar votacao
-            </button>
+            @if (pelada.votingStatus === 'CLOSED') {
+              <button
+                mat-stroked-button
+                color="primary"
+                (click)="openVoting()"
+                [disabled]="actionLoading || isConcluded"
+              >
+                ABRIR PARA NOTAS
+              </button>
+            }
+            @if (pelada.votingStatus === 'OPEN') {
+              <button
+                mat-stroked-button
+                color="warn"
+                (click)="finishVoting()"
+                [disabled]="actionLoading || isConcluded"
+              >
+                Finalizar votacao
+              </button>
+            }
             <button
               mat-flat-button
               color="accent"
@@ -190,75 +213,77 @@
         <p class="muted">Racha concluido: ajustes e novas notas estao bloqueados.</p>
       }
 
-      <div class="craque-layout">
-        <div class="panel craque-vote-box">
-          <h3>Craque do Racha (Top 3)</h3>
-          @if (canCurrentUserVoteCraque) {
-            <div class="craque-select-grid">
-              <mat-form-field appearance="outline">
-                <mat-label>1o lugar</mat-label>
-                <mat-select
-                  [value]="craqueVoteSelections.firstUserId"
-                  (valueChange)="craqueVoteSelections.firstUserId = $event"
-                >
-                  @for (card of ratingCards; track card.playerId) {
-                    <mat-option
-                      [value]="card.playerId"
-                      [disabled]="isCraqueOptionDisabled(card.playerId, 'firstUserId')"
-                    >
-                      {{ card.name }}
-                    </mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+      <div class="craque-layout" [class.admin-only-podium]="authService.isAdmin">
+        @if (!authService.isAdmin) {
+          <div class="panel craque-vote-box">
+            <h3>Craque do Racha (Top 3)</h3>
+            @if (canCurrentUserVoteCraque) {
+              <div class="craque-select-grid">
+                <mat-form-field appearance="outline">
+                  <mat-label>1o lugar</mat-label>
+                  <mat-select
+                    [value]="craqueVoteSelections.firstUserId"
+                    (valueChange)="craqueVoteSelections.firstUserId = $event"
+                  >
+                    @for (card of ratingCards; track card.playerId) {
+                      <mat-option
+                        [value]="card.playerId"
+                        [disabled]="isCraqueOptionDisabled(card.playerId, 'firstUserId')"
+                      >
+                        {{ card.name }}
+                      </mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>2o lugar</mat-label>
-                <mat-select
-                  [value]="craqueVoteSelections.secondUserId"
-                  (valueChange)="craqueVoteSelections.secondUserId = $event"
-                >
-                  @for (card of ratingCards; track card.playerId) {
-                    <mat-option
-                      [value]="card.playerId"
-                      [disabled]="isCraqueOptionDisabled(card.playerId, 'secondUserId')"
-                    >
-                      {{ card.name }}
-                    </mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>2o lugar</mat-label>
+                  <mat-select
+                    [value]="craqueVoteSelections.secondUserId"
+                    (valueChange)="craqueVoteSelections.secondUserId = $event"
+                  >
+                    @for (card of ratingCards; track card.playerId) {
+                      <mat-option
+                        [value]="card.playerId"
+                        [disabled]="isCraqueOptionDisabled(card.playerId, 'secondUserId')"
+                      >
+                        {{ card.name }}
+                      </mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>3o lugar</mat-label>
-                <mat-select
-                  [value]="craqueVoteSelections.thirdUserId"
-                  (valueChange)="craqueVoteSelections.thirdUserId = $event"
-                >
-                  @for (card of ratingCards; track card.playerId) {
-                    <mat-option
-                      [value]="card.playerId"
-                      [disabled]="isCraqueOptionDisabled(card.playerId, 'thirdUserId')"
-                    >
-                      {{ card.name }}
-                    </mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-            </div>
+                <mat-form-field appearance="outline">
+                  <mat-label>3o lugar</mat-label>
+                  <mat-select
+                    [value]="craqueVoteSelections.thirdUserId"
+                    (valueChange)="craqueVoteSelections.thirdUserId = $event"
+                  >
+                    @for (card of ratingCards; track card.playerId) {
+                      <mat-option
+                        [value]="card.playerId"
+                        [disabled]="isCraqueOptionDisabled(card.playerId, 'thirdUserId')"
+                      >
+                        {{ card.name }}
+                      </mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+              </div>
 
-            <button
-              mat-flat-button
-              color="accent"
-              (click)="submitCraqueVote()"
-              [disabled]="actionLoading || isConcluded"
-            >
-              Salvar podio de craque
-            </button>
-          } @else {
-            <p class="muted">A votacao de craque estara disponivel quando o ADM abrir as notas.</p>
-          }
-        </div>
+              <button
+                mat-flat-button
+                color="accent"
+                (click)="submitCraqueVote()"
+                [disabled]="actionLoading || isConcluded"
+              >
+                Salvar podio de craque
+              </button>
+            } @else {
+              <p class="muted">A votacao de craque estara disponivel quando o ADM abrir as notas.</p>
+            }
+          </div>
+        }
 
         <div class="panel craque-podium-box">
           <h3>Podio dos Craques</h3>
@@ -365,7 +390,7 @@
                     </div>
 
                     <div class="vote-edit-actions">
-                      <mat-form-field appearance="outline">
+                      <mat-form-field appearance="outline" class="compact-note-field">
                         <mat-label>Nota</mat-label>
                         <mat-select
                           [value]="adminVoteSelections[voteEditKey(vote)]"

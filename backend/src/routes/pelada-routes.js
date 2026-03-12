@@ -609,6 +609,7 @@ export async function peladaRoutes(fastify) {
     }
 
     await pelada.save();
+    await recalculateAllUsersStats();
 
     return reply.code(201).send({ message: 'Podio de craque registrado com sucesso.' });
   });

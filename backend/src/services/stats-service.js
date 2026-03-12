@@ -19,6 +19,10 @@ export async function recalculateAllUsersStats() {
       totalWins: 0,
       totalDraws: 0,
       totalLosses: 0,
+      totalCraquePoints: 0,
+      totalCraqueFirstPlaces: 0,
+      totalCraqueSecondPlaces: 0,
+      totalCraqueThirdPlaces: 0,
       initialRating: Number(user.initialRating || 3)
     });
     ratings.set(key, {
@@ -27,7 +31,7 @@ export async function recalculateAllUsersStats() {
     });
   }
 
-  const peladas = await Pelada.find({}, 'teams playerStats votes').lean();
+  const peladas = await Pelada.find({}, 'teams playerStats votes craqueVotes').lean();
 
   for (const pelada of peladas) {
     for (const team of pelada.teams || []) {
@@ -59,6 +63,26 @@ export async function recalculateAllUsersStats() {
       rating.sum += Number(vote.score || 0);
       rating.count += 1;
     }
+
+    for (const craqueVote of pelada.craqueVotes || []) {
+      const firstStat = totals.get(toIdString(craqueVote.firstUser));
+      if (firstStat) {
+        firstStat.totalCraquePoints += 5;
+        firstStat.totalCraqueFirstPlaces += 1;
+      }
+
+      const secondStat = totals.get(toIdString(craqueVote.secondUser));
+      if (secondStat) {
+        secondStat.totalCraquePoints += 3;
+        secondStat.totalCraqueSecondPlaces += 1;
+      }
+
+      const thirdStat = totals.get(toIdString(craqueVote.thirdUser));
+      if (thirdStat) {
+        thirdStat.totalCraquePoints += 1;
+        thirdStat.totalCraqueThirdPlaces += 1;
+      }
+    }
   }
 
   const operations = [];
@@ -80,6 +104,10 @@ export async function recalculateAllUsersStats() {
             totalWins: stat.totalWins,
             totalDraws: stat.totalDraws,
             totalLosses: stat.totalLosses,
+            totalCraquePoints: stat.totalCraquePoints,
+            totalCraqueFirstPlaces: stat.totalCraqueFirstPlaces,
+            totalCraqueSecondPlaces: stat.totalCraqueSecondPlaces,
+            totalCraqueThirdPlaces: stat.totalCraqueThirdPlaces,
             ratingAverage
           }
         }

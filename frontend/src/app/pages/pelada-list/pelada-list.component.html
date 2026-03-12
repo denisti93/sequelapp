@@ -8,15 +8,33 @@
         <div class="summary-metrics">
           <div class="metric-card">
             <span class="metric-label">Gols</span>
-            <strong>{{ mySummary.totalGoals }}</strong>
+            <strong>{{ mySummary.totalGoals || 0 }}</strong>
           </div>
           <div class="metric-card">
             <span class="metric-label">Assistencias</span>
-            <strong>{{ mySummary.totalAssists }}</strong>
+            <strong>{{ mySummary.totalAssists || 0 }}</strong>
           </div>
           <div class="metric-card">
             <span class="metric-label">Vitorias</span>
-            <strong>{{ mySummary.totalWins }}</strong>
+            <strong>{{ mySummary.totalWins || 0 }}</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Empates</span>
+            <strong>{{ mySummary.totalDraws || 0 }}</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Derrotas</span>
+            <strong>{{ mySummary.totalLosses || 0 }}</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Pontos no Podio</span>
+            <strong>{{ mySummary.totalCraquePoints || 0 }}</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Podios (1o/2o/3o)</span>
+            <strong>
+              {{ mySummary.totalCraqueFirstPlaces || 0 }}/{{ mySummary.totalCraqueSecondPlaces || 0 }}/{{ mySummary.totalCraqueThirdPlaces || 0 }}
+            </strong>
           </div>
         </div>
       } @else {
@@ -55,7 +73,7 @@
       <table mat-table [dataSource]="peladas" class="pelada-table">
         <ng-container matColumnDef="date">
           <th mat-header-cell *matHeaderCellDef>Data</th>
-          <td mat-cell *matCellDef="let pelada">{{ pelada.date | date : 'dd/MM/yyyy' }}</td>
+          <td mat-cell *matCellDef="let pelada">{{ pelada.date | date : 'dd/MM/yyyy' : 'UTC' }}</td>
         </ng-container>
 
         <ng-container matColumnDef="status">
@@ -90,7 +108,7 @@
     <div class="mobile-racha-list">
       @for (pelada of peladas; track pelada.id) {
         <article class="mobile-racha-card">
-          <h3>{{ pelada.date | date : 'dd/MM/yyyy' }}</h3>
+          <h3>{{ pelada.date | date : 'dd/MM/yyyy' : 'UTC' }}</h3>
           <div class="mobile-chip-row">
             <span class="status-chip" [class.success]="pelada.happened">
               {{ pelada.happened ? 'Aconteceu' : 'Vai acontecer' }}
