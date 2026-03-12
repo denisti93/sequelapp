@@ -1,0 +1,81 @@
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  gap: 12px;
+  border-bottom: 1px solid rgba(249, 115, 22, 0.55);
+  box-shadow: 0 18px 24px -22px rgba(46, 16, 101, 0.92);
+  background:
+    linear-gradient(110deg, #4c1d95 0%, #6d28d9 48%, #9a3412 100%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(249, 115, 22, 0.14) 0,
+      rgba(249, 115, 22, 0.14) 12px,
+      rgba(255, 255, 255, 0.05) 12px,
+      rgba(255, 255, 255, 0.05) 24px
+    );
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  color: #ffb45b;
+  text-shadow: 0 2px 10px rgba(40, 12, 80, 0.8);
+}
+
+.brand-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.menu-links {
+  display: flex;
+  gap: 6px;
+}
+
+.menu-links .mdc-button,
+.menu-links .mat-mdc-button-base,
+.topbar button,
+.user-pill,
+.brand-icon {
+  color: #ffb45b !important;
+}
+
+.active-link {
+  font-weight: 600;
+  background: rgba(249, 115, 22, 0.18);
+}
+
+.user-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(76, 29, 149, 0.42);
+  border: 1px solid rgba(249, 115, 22, 0.35);
+  font-size: 12px;
+}
+
+@media (max-width: 800px) {
+  .topbar {
+    flex-wrap: wrap;
+    padding: 10px;
+  }
+
+  .spacer {
+    display: none;
+  }
+
+  .menu-links {
+    width: 100%;
+  }
+}

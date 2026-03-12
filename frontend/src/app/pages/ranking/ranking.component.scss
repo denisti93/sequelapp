@@ -1,0 +1,46 @@
+.ranking-table {
+  width: 100%;
+  min-width: 840px;
+}
+
+.mobile-ranking-list {
+  display: none;
+  gap: 10px;
+}
+
+.mobile-ranking-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+  display: grid;
+  gap: 6px;
+}
+
+.mobile-ranking-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.mobile-ranking-header h3 {
+  margin: 0;
+}
+
+.mobile-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  font-size: 0.92rem;
+}
+
+@media (max-width: 760px) {
+  .desktop-table {
+    display: none;
+  }
+
+  .mobile-ranking-list {
+    display: grid;
+  }
+}

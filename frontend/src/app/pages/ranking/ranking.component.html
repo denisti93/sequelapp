@@ -1,0 +1,100 @@
+<div class="page-container page-grid">
+  @if (authService.isAdmin) {
+    <section class="panel">
+      <h2 class="panel-title">Ajustar nota inicial de jogador</h2>
+      <form [formGroup]="ratingForm" (ngSubmit)="updateInitialRating()" class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Jogador</mat-label>
+          <mat-select formControlName="userId">
+            @for (user of users; track user.id) {
+              <mat-option [value]="user.id">{{ user.name }} ({{ user.username }})</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Nota inicial</mat-label>
+          <input matInput type="number" min="1" max="5" step="0.1" formControlName="initialRating" />
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button mat-flat-button color="primary" type="submit" [disabled]="loading">
+            Salvar nota inicial
+          </button>
+        </div>
+      </form>
+    </section>
+  }
+
+  <section class="panel">
+    <h2 class="panel-title">Ranking geral de jogadores</h2>
+
+    @if (loading) {
+      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    }
+
+    <div class="table-wrap desktop-table">
+      <table mat-table [dataSource]="users" class="ranking-table">
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>Jogador</th>
+          <td mat-cell *matCellDef="let user">
+            <div>{{ user.name }}</div>
+            <small class="muted">&#64;{{ user.username }}</small>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="totalGoals">
+          <th mat-header-cell *matHeaderCellDef>Gols</th>
+          <td mat-cell *matCellDef="let user">{{ user.totalGoals }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="totalAssists">
+          <th mat-header-cell *matHeaderCellDef>Ass.</th>
+          <td mat-cell *matCellDef="let user">{{ user.totalAssists }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="totalWins">
+          <th mat-header-cell *matHeaderCellDef>Vit.</th>
+          <td mat-cell *matCellDef="let user">{{ user.totalWins }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="totalDraws">
+          <th mat-header-cell *matHeaderCellDef>Emp.</th>
+          <td mat-cell *matCellDef="let user">{{ user.totalDraws }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="totalLosses">
+          <th mat-header-cell *matHeaderCellDef>Der.</th>
+          <td mat-cell *matCellDef="let user">{{ user.totalLosses }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="ratingAverage">
+          <th mat-header-cell *matHeaderCellDef>Nota</th>
+          <td mat-cell *matCellDef="let user">{{ user.ratingAverage | number : '1.1-2' }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+    </div>
+
+    <div class="mobile-ranking-list">
+      @for (user of users; track user.id) {
+        <article class="mobile-ranking-card">
+          <div class="mobile-ranking-header">
+            <h3>{{ user.name }}</h3>
+            <span class="status-chip">Nota {{ user.ratingAverage | number : '1.1-2' }}</span>
+          </div>
+          <small class="muted">&#64;{{ user.username }}</small>
+          <div class="mobile-stats-grid">
+            <span>Gols: <strong>{{ user.totalGoals }}</strong></span>
+            <span>Assist.: <strong>{{ user.totalAssists }}</strong></span>
+            <span>Vit.: <strong>{{ user.totalWins }}</strong></span>
+            <span>Emp.: <strong>{{ user.totalDraws }}</strong></span>
+            <span>Der.: <strong>{{ user.totalLosses }}</strong></span>
+          </div>
+        </article>
+      }
+    </div>
+  </section>
+</div>

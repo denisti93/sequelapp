@@ -1,0 +1,73 @@
+.pelada-table {
+  width: 100%;
+  min-width: 680px;
+}
+
+.summary-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.metric-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: linear-gradient(140deg, #f3e8ff, #ffe7d6);
+  display: grid;
+  gap: 4px;
+}
+
+.metric-card strong {
+  font-size: 1.35rem;
+  color: #5b21b6;
+}
+
+.metric-label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.racha-status-chip {
+  margin-left: 8px;
+  background: linear-gradient(90deg, #ffe4cf, #ffd8bb);
+  color: #c2410c;
+}
+
+.mobile-racha-list {
+  display: none;
+  gap: 10px;
+}
+
+.mobile-racha-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.mobile-racha-card h3 {
+  margin: 0;
+}
+
+.mobile-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+@media (max-width: 760px) {
+  .summary-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .desktop-table {
+    display: none;
+  }
+
+  .mobile-racha-list {
+    display: grid;
+  }
+}

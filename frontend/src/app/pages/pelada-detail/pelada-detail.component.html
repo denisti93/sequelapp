@@ -1,0 +1,302 @@
+<div class="page-container page-grid">
+  <a mat-button color="primary" routerLink="/peladas">
+    <mat-icon>arrow_back</mat-icon>
+    Voltar para historico
+  </a>
+
+  @if (loading) {
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  }
+
+  @if (pelada) {
+    <section class="panel">
+      <h2 class="panel-title">Racha de {{ pelada.date | date : 'dd/MM/yyyy' }}</h2>
+      <div class="summary-row">
+        <span class="status-chip" [class.success]="pelada.happened">
+          {{ pelada.happened ? 'Aconteceu' : 'Vai acontecer' }}
+        </span>
+        <span class="status-chip racha-status-chip">
+          {{ isConcluded ? 'Concluido' : 'Aberto' }}
+        </span>
+        <span class="status-chip">Votacao: {{ ratingStatusLabel() }}</span>
+        <span class="muted">Votos registrados: {{ pelada.votesCount }}</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">Times do racha</h2>
+      <div class="team-grid">
+        @for (team of pelada.teams; track team.id) {
+          <mat-card class="team-card">
+            <mat-card-header>
+              <mat-card-title>{{ team.name }}</mat-card-title>
+              <mat-card-subtitle>
+                {{ team.wins }}V / {{ team.draws }}E / {{ team.losses }}D
+              </mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <p class="muted">Jogadores</p>
+              <ul>
+                @for (player of team.players; track player.id) {
+                  <li>{{ player.name }}</li>
+                }
+              </ul>
+
+              @if (team.goalkeepers.length > 0) {
+                <p class="muted">Goleiros: {{ team.goalkeepers.join(', ') }}</p>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    </section>
+
+    @if (authService.isAdmin) {
+      <section class="panel">
+        <h2 class="panel-title">Configurar times (4 times x 5 jogadores)</h2>
+
+        <form [formGroup]="teamForm" class="page-grid" (ngSubmit)="saveTeams()">
+          <div formArrayName="teams" class="team-form-grid">
+            @for (teamCtrl of teamsArray.controls; track teamCtrl; let i = $index) {
+              <div class="panel team-editor" [formGroupName]="i">
+                <h3>Time {{ i + 1 }}</h3>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Nome do time</mat-label>
+                  <input matInput formControlName="name" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Jogadores (5)</mat-label>
+                  <mat-select formControlName="players" multiple (selectionChange)="onTeamPlayersChanged(i)">
+                    @for (user of users; track user.id) {
+                      <mat-option [value]="user.id" [disabled]="isPlayerUnavailableForTeam(user.id, i)">
+                        {{ user.name }} (&#64;{{ user.username }})
+                      </mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Goleiros (separados por virgula)</mat-label>
+                  <input matInput formControlName="goalkeepersText" />
+                </mat-form-field>
+              </div>
+            }
+          </div>
+
+          <div class="form-actions">
+            <button mat-flat-button color="primary" type="submit" [disabled]="actionLoading || isConcluded">
+              Salvar times
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">Resultados por time</h2>
+
+        <form [formGroup]="resultsForm" (ngSubmit)="saveResults()" class="results-grid">
+          <div formArrayName="results" class="results-grid">
+            @for (resultCtrl of resultsArray.controls; track resultCtrl; let i = $index) {
+              <div [formGroupName]="i" class="panel result-card">
+                <h3>{{ resultCtrl.get('teamName')?.value }}</h3>
+
+                <div class="form-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Vitorias</mat-label>
+                    <input matInput type="number" min="0" formControlName="wins" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Empates</mat-label>
+                    <input matInput type="number" min="0" formControlName="draws" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Derrotas</mat-label>
+                    <input matInput type="number" min="0" formControlName="losses" />
+                  </mat-form-field>
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="form-actions">
+            <button mat-flat-button color="primary" type="submit" [disabled]="actionLoading || isConcluded">
+              Salvar resultados
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">Gols e assistencias por jogador</h2>
+
+        <form [formGroup]="statsForm" (ngSubmit)="savePlayerStats()">
+          <div formArrayName="stats" class="stats-grid">
+            @for (statCtrl of statsArray.controls; track statCtrl; let i = $index) {
+              <div [formGroupName]="i" class="panel stat-row">
+                <h3>{{ statCtrl.get('playerName')?.value }}</h3>
+
+                <div class="form-grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Gols</mat-label>
+                    <input matInput type="number" min="0" formControlName="goals" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Assistencias</mat-label>
+                    <input matInput type="number" min="0" formControlName="assists" />
+                  </mat-form-field>
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="form-actions">
+            <button mat-flat-button color="primary" type="submit" [disabled]="actionLoading || isConcluded">
+              Salvar gols/assistencias
+            </button>
+          </div>
+        </form>
+      </section>
+    }
+
+    <section class="panel">
+      <div class="vote-title-row">
+        <h2 class="panel-title">Notas dos jogadores</h2>
+        @if (authService.isAdmin) {
+          <div class="form-actions">
+            <button mat-stroked-button color="primary" (click)="openVoting()" [disabled]="actionLoading || isConcluded">
+              ABRIR PARA NOTAS
+            </button>
+            <button mat-stroked-button color="warn" (click)="finishVoting()" [disabled]="actionLoading || isConcluded">
+              Finalizar votacao
+            </button>
+            <button
+              mat-flat-button
+              color="accent"
+              (click)="concludeRacha()"
+              [disabled]="actionLoading || isConcluded"
+            >
+              Concluir racha
+            </button>
+          </div>
+        }
+      </div>
+
+      @if (isConcluded) {
+        <p class="muted">Racha concluido: ajustes e novas notas estao bloqueados.</p>
+      }
+
+      @if (ratingCards.length === 0) {
+        <p class="muted">Ainda nao ha jogadores disponiveis para votacao neste racha.</p>
+      }
+
+      <div class="rating-grid">
+        @for (card of ratingCards; track card.playerId) {
+          <mat-card class="rating-card">
+            <mat-card-header>
+              <mat-card-title>{{ card.name }}</mat-card-title>
+              <mat-card-subtitle>&#64;{{ card.username }}</mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <mat-chip-set class="chip-line">
+                <mat-chip>Gols: {{ card.matchGoals }}</mat-chip>
+                <mat-chip>Assist.: {{ card.matchAssists }}</mat-chip>
+                <mat-chip>{{ card.matchWins }}V/{{ card.matchDraws }}E/{{ card.matchLosses }}D</mat-chip>
+              </mat-chip-set>
+              <p class="muted">Nota media geral: {{ card.ratingAverage | number : '1.1-2' }}</p>
+
+              @if (card.alreadyRatedByMe) {
+                <span class="status-chip success">Voce ja votou neste jogador</span>
+              }
+
+              @if (card.canVote) {
+                <div class="vote-form">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Nota (1 a 5)</mat-label>
+                    <mat-select
+                      [value]="voteSelections[card.playerId]"
+                      (valueChange)="voteSelections[card.playerId] = $event"
+                    >
+                      <mat-option [value]="1">1</mat-option>
+                      <mat-option [value]="2">2</mat-option>
+                      <mat-option [value]="3">3</mat-option>
+                      <mat-option [value]="4">4</mat-option>
+                      <mat-option [value]="5">5</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                  <button
+                    mat-flat-button
+                    color="primary"
+                    (click)="submitVote(card)"
+                    [disabled]="actionLoading || isConcluded"
+                  >
+                    Enviar nota
+                  </button>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    </section>
+
+    @if (authService.isAdmin) {
+      <section class="panel">
+        <h2 class="panel-title">Auditoria de notas (ADM)</h2>
+
+        @if (voteGroups.length === 0) {
+          <p class="muted">Nenhuma nota registrada neste racha ate agora.</p>
+        }
+
+        <div class="vote-audit-grid">
+          @for (group of voteGroups; track group.toUserId) {
+            <article class="panel vote-audit-group">
+              <h3>Notas recebidas por {{ group.toUserName }}</h3>
+
+              <div class="vote-audit-list">
+                @for (vote of group.votes; track vote.voteId) {
+                  <div class="vote-audit-row">
+                    <div>
+                      <strong>{{ vote.fromUserName }}</strong>
+                      <p class="muted">avaliou {{ group.toUserName }}</p>
+                    </div>
+
+                    <div class="vote-edit-actions">
+                      <mat-form-field appearance="outline">
+                        <mat-label>Nota</mat-label>
+                        <mat-select
+                          [value]="adminVoteSelections[voteEditKey(vote)]"
+                          (valueChange)="adminVoteSelections[voteEditKey(vote)] = $event"
+                        >
+                          <mat-option [value]="1">1</mat-option>
+                          <mat-option [value]="2">2</mat-option>
+                          <mat-option [value]="3">3</mat-option>
+                          <mat-option [value]="4">4</mat-option>
+                          <mat-option [value]="5">5</mat-option>
+                        </mat-select>
+                      </mat-form-field>
+                      <button
+                        mat-stroked-button
+                        color="primary"
+                        (click)="saveAdminVote(vote)"
+                        [disabled]="actionLoading || isConcluded"
+                      >
+                        Salvar
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+    }
+  }
+</div>

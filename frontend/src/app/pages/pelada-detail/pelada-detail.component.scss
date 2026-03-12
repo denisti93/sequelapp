@@ -1,0 +1,161 @@
+.summary-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.racha-status-chip {
+  background: linear-gradient(90deg, #ffe4cf, #ffd8bb);
+  color: #c2410c;
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.team-card ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.team-card {
+  border-top: 3px solid #7c3aed;
+  background: linear-gradient(180deg, #ffffff 0%, #faf5ff 100%);
+}
+
+.team-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.team-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.results-grid,
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.result-card,
+.stat-row {
+  display: grid;
+  gap: 8px;
+}
+
+.vote-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.rating-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.rating-card {
+  border-radius: 14px;
+  border-top: 3px solid #f97316;
+  background: linear-gradient(180deg, #ffffff 0%, #fff5ec 100%);
+}
+
+.chip-line {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.vote-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.vote-audit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.vote-audit-group {
+  display: grid;
+  gap: 10px;
+}
+
+.vote-audit-list {
+  display: grid;
+  gap: 8px;
+}
+
+.vote-audit-row {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.vote-audit-row p {
+  margin: 2px 0 0;
+}
+
+.vote-edit-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.chip-line .mat-mdc-chip {
+  background: linear-gradient(90deg, #efe3ff, #ffe8d6);
+  border: 1px solid #dfc9fb;
+}
+
+@media (max-width: 860px) {
+  .team-grid,
+  .team-form-grid,
+  .results-grid,
+  .stats-grid,
+  .rating-grid,
+  .vote-audit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vote-audit-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vote-edit-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .vote-edit-actions mat-form-field {
+    width: 100%;
+  }
+
+  .vote-edit-actions button {
+    width: 100%;
+  }
+}

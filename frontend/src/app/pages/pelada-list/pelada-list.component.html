@@ -1,0 +1,106 @@
+<div class="page-container page-grid">
+  @if (!authService.isAdmin) {
+    <section class="panel">
+      <h2 class="panel-title">Meu resumo geral</h2>
+      @if (summaryLoading) {
+        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+      } @else if (mySummary) {
+        <div class="summary-metrics">
+          <div class="metric-card">
+            <span class="metric-label">Gols</span>
+            <strong>{{ mySummary.totalGoals }}</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Assistencias</span>
+            <strong>{{ mySummary.totalAssists }}</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Vitorias</span>
+            <strong>{{ mySummary.totalWins }}</strong>
+          </div>
+        </div>
+      } @else {
+        <p class="muted">Nao foi possivel carregar seu resumo neste momento.</p>
+      }
+    </section>
+  }
+
+  @if (authService.isAdmin) {
+    <section class="panel">
+      <h2 class="panel-title">Criar novo racha</h2>
+      <form [formGroup]="createForm" class="form-grid" (ngSubmit)="createPelada()">
+        <mat-form-field appearance="outline">
+          <mat-label>Data do racha</mat-label>
+          <input matInput type="date" formControlName="date" />
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button mat-flat-button color="primary" type="submit" [disabled]="loading">
+            <mat-icon>add_circle</mat-icon>
+            Criar racha
+          </button>
+        </div>
+      </form>
+    </section>
+  }
+
+  <section class="panel">
+    <h2 class="panel-title">Historico de rachas</h2>
+
+    @if (loading) {
+      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    }
+
+    <div class="table-wrap desktop-table">
+      <table mat-table [dataSource]="peladas" class="pelada-table">
+        <ng-container matColumnDef="date">
+          <th mat-header-cell *matHeaderCellDef>Data</th>
+          <td mat-cell *matCellDef="let pelada">{{ pelada.date | date : 'dd/MM/yyyy' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let pelada">
+            <span class="status-chip" [class.success]="pelada.happened">
+              {{ pelada.happened ? 'Aconteceu' : 'Vai acontecer' }}
+            </span>
+            <span class="status-chip racha-status-chip">
+              {{ rachaStatusLabel(pelada.status) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="votingStatus">
+          <th mat-header-cell *matHeaderCellDef>Votacao</th>
+          <td mat-cell *matCellDef="let pelada">{{ votingStatusLabel(pelada.votingStatus) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let pelada">
+            <a mat-stroked-button color="primary" [routerLink]="['/peladas', pelada.id]">Detalhes</a>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+    </div>
+
+    <div class="mobile-racha-list">
+      @for (pelada of peladas; track pelada.id) {
+        <article class="mobile-racha-card">
+          <h3>{{ pelada.date | date : 'dd/MM/yyyy' }}</h3>
+          <div class="mobile-chip-row">
+            <span class="status-chip" [class.success]="pelada.happened">
+              {{ pelada.happened ? 'Aconteceu' : 'Vai acontecer' }}
+            </span>
+            <span class="status-chip racha-status-chip">{{ rachaStatusLabel(pelada.status) }}</span>
+            <span class="status-chip">{{ votingStatusLabel(pelada.votingStatus) }}</span>
+          </div>
+          <a mat-stroked-button color="primary" [routerLink]="['/peladas', pelada.id]">Detalhes</a>
+        </article>
+      }
+    </div>
+  </section>
+</div>

@@ -1,0 +1,23 @@
+<mat-toolbar color="primary" class="topbar">
+  <div class="brand" routerLink="/peladas">
+    <mat-icon class="brand-icon">sports_soccer</mat-icon>
+    Sequelapp - Racha dos Sequelados
+  </div>
+
+  <div class="spacer"></div>
+
+  @if (authService.isLoggedIn) {
+    <nav class="menu-links">
+      <a mat-button routerLink="/peladas" routerLinkActive="active-link">Rachas</a>
+      <a mat-button routerLink="/ranking" routerLinkActive="active-link">Ranking</a>
+    </nav>
+
+    <span class="user-pill">{{ authService.currentUser?.name }} ({{ authService.currentUser?.role }})</span>
+    <button mat-stroked-button color="accent" (click)="logout()">
+      <mat-icon>logout</mat-icon>
+      Sair
+    </button>
+  }
+</mat-toolbar>
+
+<router-outlet></router-outlet>
