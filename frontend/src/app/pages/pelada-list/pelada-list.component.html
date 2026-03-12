@@ -5,6 +5,30 @@
       @if (summaryLoading) {
         <mat-progress-bar mode="indeterminate"></mat-progress-bar>
       } @else if (mySummary) {
+        <form [formGroup]="positionForm" class="position-form" (ngSubmit)="saveMyPosition()">
+          <mat-form-field appearance="outline" class="position-field">
+            <mat-label>Minha posição em campo</mat-label>
+            <mat-select formControlName="position">
+              @for (option of playerPositionOptions; track option.value) {
+                <mat-option [value]="option.value">{{ option.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <button
+            mat-flat-button
+            color="primary"
+            type="submit"
+            [disabled]="positionLoading || summaryLoading || positionForm.invalid"
+          >
+            Salvar posição
+          </button>
+
+          <span class="status-chip position-chip">
+            Atual: {{ playerPositionLabel(mySummary.position) }}
+          </span>
+        </form>
+
         <div class="summary-metrics">
           <div class="metric-card">
             <span class="metric-label">Gols</span>

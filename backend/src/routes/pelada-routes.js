@@ -177,7 +177,7 @@ export async function peladaRoutes(fastify) {
 
   fastify.get('/:id', { preHandler: [authenticate] }, async (request, reply) => {
     const pelada = await Pelada.findById(request.params.id)
-      .populate('teams.players', 'name username role ratingAverage')
+      .populate('teams.players', 'name username role ratingAverage position')
       .populate('playerStats.player', 'name username')
       .lean();
 
@@ -214,7 +214,8 @@ export async function peladaRoutes(fastify) {
           name: player.name,
           username: player.username,
           role: player.role,
-          ratingAverage: player.ratingAverage
+          ratingAverage: player.ratingAverage,
+          position: player.position
         }))
       })),
       playerStats: (pelada.playerStats || []).map((stat) => ({

@@ -9,6 +9,22 @@
   gap: 12px;
 }
 
+.position-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.position-field {
+  min-width: 220px;
+}
+
+.position-chip {
+  background: linear-gradient(90deg, #e9dcff, #ffe6d4);
+}
+
 .metric-card {
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -68,6 +84,19 @@
 }
 
 @media (max-width: 760px) {
+  .position-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .position-field {
+    width: 100%;
+  }
+
+  .position-form button {
+    width: 100%;
+  }
+
   .summary-metrics {
     grid-template-columns: 1fr;
   }

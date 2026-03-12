@@ -25,11 +25,20 @@ import { UserService } from '../../core/services/user.service';
 import {
   CraqueVoteSelection,
   PeladaDetail,
+  PlayerPosition,
   RatingCard,
   RatingCardsResponse,
   VoteDetail
 } from '../../models/pelada';
 import { User } from '../../models/user';
+
+type FieldLine = 'DEFENSE' | 'MIDFIELD' | 'ATTACK';
+
+interface TeamFieldLayout {
+  defense: PeladaDetail['teams'][number]['players'];
+  midfield: PeladaDetail['teams'][number]['players'];
+  attack: PeladaDetail['teams'][number]['players'];
+}
 
 function exactLengthValidator(length: number) {
   return (control: AbstractControl): ValidationErrors | null => {
@@ -1020,6 +1029,51 @@ export class PeladaDetailComponent implements OnInit {
     return Boolean(this.isTournament && this.pelada?.tournament?.championTeamId === teamId);
   }
 
+  teamFieldLayout(team: PeladaDetail['teams'][number]): TeamFieldLayout {
+    const lines: Record<FieldLine, PeladaDetail['teams'][number]['players']> = {
+      DEFENSE: [],
+      MIDFIELD: [],
+      ATTACK: []
+    };
+    const maxPerLine = 2;
+
+    const players = [...(team.players || [])].sort((a, b) => a.name.localeCompare(b.name));
+    const unassigned: PeladaDetail['teams'][number]['players'] = [];
+
+    for (const player of players) {
+      const preferredLine = this.preferredLineFromPosition(player.position);
+      if (!preferredLine) {
+        unassigned.push(player);
+        continue;
+      }
+
+      const targetLine = this.selectLine(preferredLine, lines, maxPerLine);
+      lines[targetLine].push(player);
+    }
+
+    for (const player of unassigned) {
+      const fallbackLine = this.smallestLine(lines, ['MIDFIELD', 'DEFENSE', 'ATTACK'], maxPerLine);
+      lines[fallbackLine].push(player);
+    }
+
+    this.ensureMinOnePerLine(lines);
+
+    return {
+      defense: lines.DEFENSE,
+      midfield: lines.MIDFIELD,
+      attack: lines.ATTACK
+    };
+  }
+
+  playerShortName(name: string): string {
+    const parts = String(name || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    return parts[0] || name;
+  }
+
   formatMatchScore(homeGoals: number | null, awayGoals: number | null): string {
     if (homeGoals === null || awayGoals === null) {
       return 'x';
@@ -1034,5 +1088,77 @@ export class PeladaDetailComponent implements OnInit {
       .replace(/[\u0300-\u036f]/g, '')
       .trim()
       .toLowerCase();
+  }
+
+  private preferredLineFromPosition(position?: PlayerPosition): FieldLine | null {
+    if (position === 'ZAGUEIRO') return 'DEFENSE';
+    if (position === 'MEIA') return 'MIDFIELD';
+    if (position === 'ATACANTE') return 'ATTACK';
+    return null;
+  }
+
+  private selectLine(
+    preferredLine: FieldLine,
+    lines: Record<FieldLine, PeladaDetail['teams'][number]['players']>,
+    maxPerLine: number
+  ): FieldLine {
+    if (lines[preferredLine].length < maxPerLine) {
+      return preferredLine;
+    }
+
+    const overflowOrderByLine: Record<FieldLine, FieldLine[]> = {
+      DEFENSE: ['MIDFIELD', 'ATTACK'],
+      MIDFIELD: ['ATTACK', 'DEFENSE'],
+      ATTACK: ['MIDFIELD', 'DEFENSE']
+    };
+
+    for (const candidate of overflowOrderByLine[preferredLine]) {
+      if (lines[candidate].length < maxPerLine) {
+        return candidate;
+      }
+    }
+
+    return this.smallestLine(lines, overflowOrderByLine[preferredLine]);
+  }
+
+  private smallestLine(
+    lines: Record<FieldLine, PeladaDetail['teams'][number]['players']>,
+    priorityOrder: FieldLine[],
+    maxPerLine?: number
+  ): FieldLine {
+    const candidates = priorityOrder.filter(
+      (line) => maxPerLine === undefined || lines[line].length < maxPerLine
+    );
+    const source = candidates.length > 0 ? candidates : priorityOrder;
+
+    return source.reduce((best, current) => {
+      if (lines[current].length < lines[best].length) {
+        return current;
+      }
+      return best;
+    }, source[0]);
+  }
+
+  private ensureMinOnePerLine(lines: Record<FieldLine, PeladaDetail['teams'][number]['players']>): void {
+    const required: FieldLine[] = ['DEFENSE', 'MIDFIELD', 'ATTACK'];
+
+    for (const targetLine of required) {
+      if (lines[targetLine].length > 0) {
+        continue;
+      }
+
+      const donor = required
+        .filter((line) => line !== targetLine && lines[line].length > 1)
+        .sort((a, b) => lines[b].length - lines[a].length)[0];
+
+      if (!donor) {
+        continue;
+      }
+
+      const movedPlayer = lines[donor].pop();
+      if (movedPlayer) {
+        lines[targetLine].push(movedPlayer);
+      }
+    }
   }
 }

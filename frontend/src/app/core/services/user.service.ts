@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { PendingApprovalUser, User } from '../../models/user';
+import { PendingApprovalUser, PlayerPosition, User } from '../../models/user';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
@@ -29,6 +29,12 @@ export class UserService {
   updateInitialRating(userId: string, initialRating: number): Observable<User> {
     return this.http.patch<User>(`${this.apiUrl}/users/${userId}/initial-rating`, {
       initialRating
+    });
+  }
+
+  updateMyPosition(position: PlayerPosition): Observable<{ message: string; user: User }> {
+    return this.http.patch<{ message: string; user: User }>(`${this.apiUrl}/users/me/position`, {
+      position
     });
   }
 }

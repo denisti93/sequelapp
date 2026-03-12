@@ -24,6 +24,10 @@ const userSchema = new mongoose.Schema(
       default: 'JOGADOR',
       required: true
     },
+    position: {
+      type: String,
+      enum: ['ZAGUEIRO', 'MEIA', 'ATACANTE']
+    },
     approvalStatus: {
       type: String,
       enum: ['PENDING', 'APPROVED'],

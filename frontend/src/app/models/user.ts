@@ -1,11 +1,13 @@
 export type UserRole = 'ADM' | 'JOGADOR';
 export type ApprovalStatus = 'PENDING' | 'APPROVED';
+export type PlayerPosition = 'ZAGUEIRO' | 'MEIA' | 'ATACANTE';
 
 export interface User {
   id: string;
   name: string;
   username: string;
   role: UserRole;
+  position?: PlayerPosition;
   approvalStatus?: ApprovalStatus;
   createdAt?: string;
   initialRating: number;

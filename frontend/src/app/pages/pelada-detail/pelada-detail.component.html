@@ -54,12 +54,52 @@
                 </p>
               }
 
-              <p class="muted">Jogadores</p>
-              <ul>
-                @for (player of team.players; track player.id) {
-                  <li>{{ player.name }}</li>
-                }
-              </ul>
+              <p class="muted">Formação no campo</p>
+              @if (teamFieldLayout(team); as layout) {
+                <div class="team-pitch">
+                  <div class="pitch-overlay" aria-hidden="true">
+                    <span class="pitch-midline"></span>
+                    <span class="pitch-center-circle"></span>
+                    <span class="pitch-penalty pitch-penalty-top"></span>
+                    <span class="pitch-goal-box pitch-goal-box-top"></span>
+                    <span class="pitch-penalty pitch-penalty-bottom"></span>
+                    <span class="pitch-goal-box pitch-goal-box-bottom"></span>
+                  </div>
+
+                  <div class="pitch-row pitch-row-attack">
+                    <div class="pitch-buttons">
+                      @for (player of layout.attack; track player.id) {
+                        <span class="field-player" [attr.title]="player.name">
+                          <span class="button-player"></span>
+                          <small class="field-player-name">{{ playerShortName(player.name) }}</small>
+                        </span>
+                      }
+                    </div>
+                  </div>
+
+                  <div class="pitch-row pitch-row-midfield">
+                    <div class="pitch-buttons">
+                      @for (player of layout.midfield; track player.id) {
+                        <span class="field-player" [attr.title]="player.name">
+                          <span class="button-player"></span>
+                          <small class="field-player-name">{{ playerShortName(player.name) }}</small>
+                        </span>
+                      }
+                    </div>
+                  </div>
+
+                  <div class="pitch-row pitch-row-defense">
+                    <div class="pitch-buttons">
+                      @for (player of layout.defense; track player.id) {
+                        <span class="field-player" [attr.title]="player.name">
+                          <span class="button-player"></span>
+                          <small class="field-player-name">{{ playerShortName(player.name) }}</small>
+                        </span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
 
               @if (team.goalkeepers.length > 0) {
                 <p class="muted">Goleiros: {{ team.goalkeepers.join(', ') }}</p>

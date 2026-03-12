@@ -1,6 +1,7 @@
 export type VotingStatus = 'CLOSED' | 'OPEN' | 'FINISHED';
 export type RachaStatus = 'OPEN' | 'CONCLUDED';
 export type RachaType = 'NORMAL' | 'TOURNAMENT';
+export type PlayerPosition = 'ZAGUEIRO' | 'MEIA' | 'ATACANTE';
 
 export interface PeladaSummary {
   id: string;
@@ -17,6 +18,7 @@ export interface PeladaPlayer {
   name: string;
   username: string;
   role: 'ADM' | 'JOGADOR';
+  position?: PlayerPosition;
   ratingAverage: number;
 }
 

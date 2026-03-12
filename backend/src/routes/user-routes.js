@@ -12,6 +12,37 @@ export async function userRoutes(fastify) {
     return user.toJSON();
   });
 
+  fastify.patch('/me/position', { preHandler: [authenticate] }, async (request, reply) => {
+    if (request.user.role !== 'JOGADOR') {
+      return reply.code(403).send({ message: 'Apenas jogadores podem definir posicao.' });
+    }
+
+    const { position } = request.body || {};
+    const normalizedPosition = String(position || '').trim().toUpperCase();
+    const validPositions = ['ZAGUEIRO', 'MEIA', 'ATACANTE'];
+
+    if (!validPositions.includes(normalizedPosition)) {
+      return reply
+        .code(400)
+        .send({ message: 'Posicao invalida. Use ZAGUEIRO, MEIA ou ATACANTE.' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      request.user.id,
+      { $set: { position: normalizedPosition } },
+      { new: true }
+    );
+
+    if (!user) {
+      return reply.code(404).send({ message: 'Usuario nao encontrado.' });
+    }
+
+    return {
+      message: 'Posicao atualizada com sucesso.',
+      user: user.toJSON()
+    };
+  });
+
   fastify.get(
     '/pending',
     {
@@ -52,6 +83,7 @@ export async function userRoutes(fastify) {
       name: user.name,
       username: user.username,
       role: user.role,
+      position: user.position,
       approvalStatus: user.approvalStatus || 'APPROVED',
       ratingAverage: user.ratingAverage,
       totalGoals: user.totalGoals,

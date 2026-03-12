@@ -15,7 +15,7 @@ import { PeladaSummary } from '../../models/pelada';
 import { AuthService } from '../../core/services/auth.service';
 import { PeladaService } from '../../core/services/pelada.service';
 import { UserService } from '../../core/services/user.service';
-import { User } from '../../models/user';
+import { PlayerPosition, User } from '../../models/user';
 
 @Component({
   selector: 'app-pelada-list',
@@ -40,13 +40,23 @@ import { User } from '../../models/user';
 export class PeladaListComponent implements OnInit {
   loading = false;
   summaryLoading = false;
+  positionLoading = false;
   peladas: PeladaSummary[] = [];
   readonly displayedColumns = ['date', 'type', 'status', 'votingStatus', 'actions'];
   mySummary: User | null = null;
+  readonly playerPositionOptions: Array<{ value: PlayerPosition; label: string }> = [
+    { value: 'ZAGUEIRO', label: 'Zagueiro' },
+    { value: 'MEIA', label: 'Meia' },
+    { value: 'ATACANTE', label: 'Atacante' }
+  ];
 
   readonly createForm = this.formBuilder.group({
     date: ['', Validators.required],
     type: ['NORMAL', Validators.required]
+  });
+
+  readonly positionForm = this.formBuilder.group({
+    position: ['', Validators.required]
   });
 
   constructor(
@@ -119,12 +129,64 @@ export class PeladaListComponent implements OnInit {
     this.userService.getMe().subscribe({
       next: (user) => {
         this.mySummary = user;
+        this.positionForm.patchValue(
+          {
+            position: user.position || ''
+          },
+          { emitEvent: false }
+        );
+        if (this.authService.currentUser?.id === user.id) {
+          this.authService.syncCurrentUser(user);
+        }
         this.summaryLoading = false;
       },
       error: () => {
         this.summaryLoading = false;
       }
     });
+  }
+
+  saveMyPosition(): void {
+    if (this.positionForm.invalid || this.positionLoading || this.summaryLoading || this.authService.isAdmin) {
+      this.positionForm.markAllAsTouched();
+      return;
+    }
+
+    const { position } = this.positionForm.getRawValue();
+    if (!position) {
+      return;
+    }
+
+    this.positionLoading = true;
+    this.userService.updateMyPosition(position as PlayerPosition).subscribe({
+      next: (response) => {
+        this.positionLoading = false;
+        this.mySummary = response.user;
+        this.positionForm.patchValue(
+          {
+            position: response.user.position || ''
+          },
+          { emitEvent: false }
+        );
+        this.authService.syncCurrentUser(response.user);
+        this.snackBar.open(response.message || 'Posição atualizada com sucesso.', 'Fechar', {
+          duration: 2600
+        });
+      },
+      error: (error) => {
+        this.positionLoading = false;
+        this.snackBar.open(error?.error?.message || 'Falha ao atualizar posição.', 'Fechar', {
+          duration: 3000
+        });
+      }
+    });
+  }
+
+  playerPositionLabel(position?: PlayerPosition): string {
+    if (position === 'ZAGUEIRO') return 'Zagueiro';
+    if (position === 'MEIA') return 'Meia';
+    if (position === 'ATACANTE') return 'Atacante';
+    return 'Não definida';
   }
 
   votingStatusLabel(votingStatus: PeladaSummary['votingStatus']): string {
