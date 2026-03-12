@@ -74,10 +74,16 @@ export class PeladaDetailComponent implements OnInit {
   canCurrentUserVote = false;
   canCurrentUserVoteCraque = false;
   voteSelections: Record<string, number> = {};
+  readonly quickScoreOptions = [1, 2, 3, 4, 5];
+  ratingFlowQueue: RatingCard[] = [];
+  ratingFlowSelectedScore: number | null = null;
+  ratingFlowAnimating = false;
+  ratingFlowSwipeDirection: 'left' | 'right' | null = null;
   craqueVoteSelections: CraqueVoteSelection = this.emptyCraqueVoteSelections();
   voteGroups: Array<{ toUserId: string; toUserName: string; votes: VoteDetail[] }> = [];
   adminVoteSelections: Record<string, number> = {};
   tournamentRoundGroups: Array<{ round: number; matchIndexes: number[] }> = [];
+  playerStatsSearchTerm = '';
 
   readonly teamForm = this.formBuilder.group({
     teams: this.formBuilder.array([])
@@ -120,8 +126,62 @@ export class PeladaDetailComponent implements OnInit {
     return this.tournamentForm.get('matches') as UntypedFormArray;
   }
 
+  get filteredStatsIndexes(): number[] {
+    const normalizedTerm = this.normalizeSearch(this.playerStatsSearchTerm);
+
+    return this.statsArray.controls
+      .map((_, index) => index)
+      .filter((index) => {
+        if (!normalizedTerm) {
+          return true;
+        }
+
+        const playerName = String(this.statsArray.at(index)?.get('playerName')?.value || '');
+        return this.normalizeSearch(playerName).includes(normalizedTerm);
+      });
+  }
+
   get isTournament(): boolean {
     return (this.pelada?.type || 'NORMAL') === 'TOURNAMENT';
+  }
+
+  get useRatingFlowMode(): boolean {
+    return !this.authService.isAdmin && this.canCurrentUserVote;
+  }
+
+  get currentRatingFlowCard(): RatingCard | null {
+    return this.ratingFlowQueue[0] || null;
+  }
+
+  get nextRatingFlowCardName(): string | null {
+    return this.ratingFlowQueue[1]?.name || null;
+  }
+
+  get ratingFlowPendingCount(): number {
+    return this.ratingFlowQueue.length;
+  }
+
+  get ratingFlowTotalCount(): number {
+    return this.ratingCards.filter(
+      (card) => card.playerId !== String(this.authService.currentUser?.id || '')
+    ).length;
+  }
+
+  get ratingFlowCompletedCount(): number {
+    return Math.max(this.ratingFlowTotalCount - this.ratingFlowPendingCount, 0);
+  }
+
+  get ratingFlowProgressValue(): number {
+    if (this.ratingFlowTotalCount <= 0) {
+      return 0;
+    }
+    return Math.round((this.ratingFlowCompletedCount / this.ratingFlowTotalCount) * 100);
+  }
+
+  get ratedPlayersByMe(): RatingCard[] {
+    return this.ratingCards
+      .filter((card) => card.alreadyRatedByMe)
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   ngOnInit(): void {
@@ -310,6 +370,8 @@ export class PeladaDetailComponent implements OnInit {
         })
       );
     }
+
+    this.playerStatsSearchTerm = '';
   }
 
   private buildTournamentForm(pelada: PeladaDetail): void {
@@ -351,6 +413,10 @@ export class PeladaDetailComponent implements OnInit {
     this.ratingCards = rating.cards;
     this.canCurrentUserVote = rating.canCurrentUserVote;
     this.canCurrentUserVoteCraque = rating.canCurrentUserVoteCraque;
+    this.ratingFlowQueue = rating.cards.filter((card) => card.canVote);
+    this.ratingFlowSelectedScore = null;
+    this.ratingFlowAnimating = false;
+    this.ratingFlowSwipeDirection = null;
     this.voteSelections = {};
     this.craqueVoteSelections = rating.myCraqueVote
       ? { ...rating.myCraqueVote }
@@ -610,6 +676,15 @@ export class PeladaDetailComponent implements OnInit {
     });
   }
 
+  onPlayerStatsSearchChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.playerStatsSearchTerm = target?.value || '';
+  }
+
+  clearPlayerStatsSearch(): void {
+    this.playerStatsSearchTerm = '';
+  }
+
   openVoting(): void {
     if (!this.ensureNotConcluded()) {
       return;
@@ -680,8 +755,11 @@ export class PeladaDetailComponent implements OnInit {
     this.peladaService.vote(this.peladaId, card.playerId, score).subscribe({
       next: () => {
         this.snackBar.open('Nota registrada.', 'Fechar', { duration: 2200 });
+        this.applySuccessfulVote(card.playerId);
         this.actionLoading = false;
-        this.loadData();
+        if (this.useRatingFlowMode && this.ratingFlowPendingCount === 0) {
+          this.loadData();
+        }
       },
       error: (error) => {
         this.actionLoading = false;
@@ -690,6 +768,96 @@ export class PeladaDetailComponent implements OnInit {
         });
       }
     });
+  }
+
+  selectFlowScore(score: number): void {
+    if (this.actionLoading || this.ratingFlowAnimating) {
+      return;
+    }
+    this.ratingFlowSelectedScore = score;
+  }
+
+  skipCurrentFlowCard(): void {
+    if (this.actionLoading || this.ratingFlowAnimating || this.ratingFlowQueue.length < 2) {
+      return;
+    }
+
+    this.animateRatingFlow('left', () => {
+      const [current, ...rest] = this.ratingFlowQueue;
+      this.ratingFlowQueue = [...rest, current];
+      this.ratingFlowSelectedScore = null;
+    });
+  }
+
+  submitCurrentFlowVote(): void {
+    if (!this.ensureNotConcluded() || !this.canCurrentUserVote) {
+      return;
+    }
+
+    const currentCard = this.currentRatingFlowCard;
+    if (!currentCard || this.actionLoading || this.ratingFlowAnimating) {
+      return;
+    }
+
+    const score = this.ratingFlowSelectedScore;
+    if (!score || score < 1 || score > 5) {
+      this.snackBar.open('Selecione uma nota entre 1 e 5 para continuar.', 'Fechar', {
+        duration: 2200
+      });
+      return;
+    }
+
+    this.actionLoading = true;
+    this.peladaService.vote(this.peladaId, currentCard.playerId, score).subscribe({
+      next: () => {
+        this.snackBar.open(`Nota registrada para ${currentCard.name}.`, 'Fechar', { duration: 1800 });
+        this.animateRatingFlow('right', () => {
+          this.applySuccessfulVote(currentCard.playerId);
+          this.ratingFlowSelectedScore = null;
+          if (this.useRatingFlowMode && this.ratingFlowPendingCount === 0) {
+            this.loadData();
+          }
+        });
+        this.actionLoading = false;
+      },
+      error: (error) => {
+        this.actionLoading = false;
+        this.snackBar.open(error?.error?.message || 'Falha ao registrar nota.', 'Fechar', {
+          duration: 3200
+        });
+      }
+    });
+  }
+
+  private applySuccessfulVote(playerId: string): void {
+    const targetId = String(playerId);
+
+    const card = this.ratingCards.find((item) => item.playerId === targetId);
+    if (card) {
+      card.alreadyRatedByMe = true;
+      card.canVote = false;
+    }
+
+    this.ratingFlowQueue = this.ratingFlowQueue.filter((item) => item.playerId !== targetId);
+    delete this.voteSelections[targetId];
+
+    if (this.pelada) {
+      this.pelada = {
+        ...this.pelada,
+        votesCount: Number(this.pelada.votesCount || 0) + 1
+      };
+    }
+  }
+
+  private animateRatingFlow(direction: 'left' | 'right', onDone: () => void): void {
+    this.ratingFlowAnimating = true;
+    this.ratingFlowSwipeDirection = direction;
+
+    setTimeout(() => {
+      onDone();
+      this.ratingFlowAnimating = false;
+      this.ratingFlowSwipeDirection = null;
+    }, 230);
   }
 
   submitCraqueVote(): void {
@@ -830,6 +998,16 @@ export class PeladaDetailComponent implements OnInit {
     return this.pelada.type === 'TOURNAMENT' ? 'Torneio' : 'Racha comum';
   }
 
+  tournamentRoundLabel(round: number): string {
+    if (round === 1) {
+      return 'Jogos de ida';
+    }
+    if (round === 2) {
+      return 'Jogos de volta';
+    }
+    return `Rodada ${round}`;
+  }
+
   tournamentLeaderName(): string {
     if (!this.pelada?.tournament?.standings?.length) {
       return '-';
@@ -848,5 +1026,13 @@ export class PeladaDetailComponent implements OnInit {
     }
 
     return `${homeGoals} x ${awayGoals}`;
+  }
+
+  private normalizeSearch(value: string): string {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
   }
 }

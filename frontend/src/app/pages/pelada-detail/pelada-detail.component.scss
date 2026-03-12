@@ -252,6 +252,19 @@
   gap: 10px;
 }
 
+.stats-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.player-search-field {
+  width: min(420px, 100%);
+}
+
 .small-number-field {
   max-width: 130px;
 }
@@ -333,10 +346,56 @@
   gap: 12px;
 }
 
+.rating-flow-shell {
+  margin-bottom: 12px;
+  display: grid;
+  gap: 10px;
+  background:
+    linear-gradient(160deg, rgba(124, 58, 237, 0.09), rgba(249, 115, 22, 0.08)),
+    #fff;
+}
+
+.rating-flow-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rating-deck {
+  position: relative;
+  padding-top: 8px;
+}
+
+.deck-preview-card {
+  border: 1px dashed #dac3ff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: linear-gradient(90deg, #f6ecff, #fff1e7);
+  margin: 0 14px 6px;
+}
+
 .rating-card {
   border-radius: 14px;
   border-top: 3px solid #f97316;
   background: linear-gradient(180deg, #ffffff 0%, #fff5ec 100%);
+}
+
+.rating-flow-card {
+  position: relative;
+  z-index: 2;
+  transition: transform 0.23s ease, opacity 0.23s ease;
+}
+
+.rating-flow-card.swipe-right {
+  transform: translateX(115%) rotate(7deg);
+  opacity: 0;
+}
+
+.rating-flow-card.swipe-left {
+  transform: translateX(-115%) rotate(-7deg);
+  opacity: 0;
 }
 
 .chip-line {
@@ -344,6 +403,47 @@
   gap: 6px;
   flex-wrap: wrap;
   margin-bottom: 8px;
+}
+
+.score-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.score-quick-button {
+  min-height: 42px;
+  font-weight: 700;
+}
+
+.score-quick-button.active {
+  background: linear-gradient(90deg, #7c3aed, #f97316);
+  color: #fff;
+  border-color: transparent;
+}
+
+.flow-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.flow-done-state {
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.rated-pill-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .vote-form {
@@ -476,6 +576,27 @@ h3 {
     grid-template-columns: 1fr;
   }
 
+  .player-search-field {
+    width: 100%;
+  }
+
+  .rating-flow-header {
+    align-items: flex-start;
+  }
+
+  .score-quick-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .flow-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .flow-actions button {
+    width: 100%;
+  }
+
   .vote-audit-row {
     flex-direction: column;
     align-items: stretch;
@@ -494,5 +615,11 @@ h3 {
 
   .vote-edit-actions button {
     min-width: 88px;
+  }
+}
+
+@media (max-width: 480px) {
+  .score-quick-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

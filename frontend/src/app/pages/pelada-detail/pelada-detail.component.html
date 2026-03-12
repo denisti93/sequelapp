@@ -85,7 +85,7 @@
                   @for (roundGroup of tournamentRoundGroups; track roundGroup.round; let isFirst = $first) {
                     <details class="round-group" [attr.open]="isFirst ? '' : null">
                       <summary class="round-summary">
-                        <strong>Rodada {{ roundGroup.round }}</strong>
+                        <strong>{{ tournamentRoundLabel(roundGroup.round) }}</strong>
                         <span class="status-chip">{{ roundGroup.matchIndexes.length }} jogo(s)</span>
                       </summary>
 
@@ -290,11 +290,44 @@
       <section class="panel">
         <h2 class="panel-title">Gols e assistências por jogador</h2>
 
+        <div class="stats-toolbar">
+          <mat-form-field appearance="outline" class="player-search-field">
+            <mat-label>Buscar jogador</mat-label>
+            <input
+              matInput
+              type="text"
+              placeholder="Digite o nome do jogador"
+              [value]="playerStatsSearchTerm"
+              (input)="onPlayerStatsSearchChange($event)"
+            />
+            @if (playerStatsSearchTerm) {
+              <button
+                mat-icon-button
+                matSuffix
+                type="button"
+                aria-label="Limpar busca de jogador"
+                (click)="clearPlayerStatsSearch()"
+              >
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </mat-form-field>
+          @if (playerStatsSearchTerm) {
+            <span class="status-chip">
+              {{ filteredStatsIndexes.length }} jogador(es) encontrado(s)
+            </span>
+          }
+        </div>
+
         <form [formGroup]="statsForm" (ngSubmit)="savePlayerStats()">
           <div formArrayName="stats" class="stats-grid">
-            @for (statCtrl of statsArray.controls; track statCtrl; let i = $index) {
-              <div [formGroupName]="i" class="panel stat-row">
-                <h3>{{ statCtrl.get('playerName')?.value }}</h3>
+            @if (filteredStatsIndexes.length === 0) {
+              <p class="muted">Nenhum jogador encontrado para o filtro atual.</p>
+            }
+
+            @for (statIndex of filteredStatsIndexes; track statIndex) {
+              <div [formGroupName]="statIndex" class="panel stat-row">
+                <h3>{{ statsArray.at(statIndex).get('playerName')?.value }}</h3>
 
                 <div class="form-grid">
                   <mat-form-field appearance="outline" class="small-number-field">
@@ -461,56 +494,146 @@
         <p class="muted">Ainda não há jogadores disponíveis para votação neste racha.</p>
       }
 
-      <div class="rating-grid">
-        @for (card of ratingCards; track card.playerId) {
-          <mat-card class="rating-card">
-            <mat-card-header>
-              <mat-card-title>{{ card.name }}</mat-card-title>
-              <mat-card-subtitle>&#64;{{ card.username }}</mat-card-subtitle>
-            </mat-card-header>
+      @if (useRatingFlowMode) {
+        <div class="panel rating-flow-shell">
+          <div class="rating-flow-header">
+            <div>
+              <h3>Avaliação rápida</h3>
+            </div>
+            <span class="status-chip">
+              {{ ratingFlowCompletedCount }}/{{ ratingFlowTotalCount }} concluídas
+            </span>
+          </div>
 
-            <mat-card-content>
-              <mat-chip-set class="chip-line">
-                <mat-chip>Gols: {{ card.matchGoals }}</mat-chip>
-                <mat-chip>Assist.: {{ card.matchAssists }}</mat-chip>
-                <mat-chip>{{ card.matchWins }}V/{{ card.matchDraws }}E/{{ card.matchLosses }}D</mat-chip>
-              </mat-chip-set>
-              <p class="muted">Nota média geral: {{ card.ratingAverage | number : '1.1-2' }}</p>
+          <mat-progress-bar mode="determinate" [value]="ratingFlowProgressValue"></mat-progress-bar>
 
-              @if (card.alreadyRatedByMe) {
-                <span class="status-chip success">Você já votou neste jogador</span>
+          @if (currentRatingFlowCard; as flowCard) {
+            <div class="rating-deck">
+              @if (nextRatingFlowCardName) {
+                <div class="deck-preview-card muted">Próximo: {{ nextRatingFlowCardName }}</div>
               }
 
-              @if (card.canVote) {
-                <div class="vote-form">
-                  <mat-form-field appearance="outline">
-                    <mat-label>Nota (1 a 5)</mat-label>
-                    <mat-select
-                      [value]="voteSelections[card.playerId]"
-                      (valueChange)="voteSelections[card.playerId] = $event"
-                    >
-                      <mat-option [value]="1">1</mat-option>
-                      <mat-option [value]="2">2</mat-option>
-                      <mat-option [value]="3">3</mat-option>
-                      <mat-option [value]="4">4</mat-option>
-                      <mat-option [value]="5">5</mat-option>
-                    </mat-select>
-                  </mat-form-field>
+              <mat-card
+                class="rating-card rating-flow-card"
+                [class.swipe-right]="ratingFlowAnimating && ratingFlowSwipeDirection === 'right'"
+                [class.swipe-left]="ratingFlowAnimating && ratingFlowSwipeDirection === 'left'"
+              >
+                <mat-card-header>
+                  <mat-card-title>{{ flowCard.name }}</mat-card-title>
+                  <mat-card-subtitle>&#64;{{ flowCard.username }}</mat-card-subtitle>
+                </mat-card-header>
 
-                  <button
-                    mat-flat-button
-                    color="primary"
-                    (click)="submitVote(card)"
-                    [disabled]="actionLoading || isConcluded"
-                  >
-                    Enviar nota
-                  </button>
+                <mat-card-content>
+                  <mat-chip-set class="chip-line">
+                    <mat-chip>Gols: {{ flowCard.matchGoals }}</mat-chip>
+                    <mat-chip>Assist.: {{ flowCard.matchAssists }}</mat-chip>
+                    <mat-chip>{{ flowCard.matchWins }}V/{{ flowCard.matchDraws }}E/{{ flowCard.matchLosses }}D</mat-chip>
+                  </mat-chip-set>
+                  <p class="muted">Nota média geral: {{ flowCard.ratingAverage | number : '1.1-2' }}</p>
+
+                  <div class="score-quick-grid">
+                    @for (score of quickScoreOptions; track score) {
+                      <button
+                        mat-stroked-button
+                        type="button"
+                        class="score-quick-button"
+                        [class.active]="ratingFlowSelectedScore === score"
+                        (click)="selectFlowScore(score)"
+                        [disabled]="actionLoading || ratingFlowAnimating || isConcluded"
+                      >
+                        {{ score }}
+                      </button>
+                    }
+                  </div>
+
+                  <div class="flow-actions">
+                    <button
+                      mat-button
+                      type="button"
+                      (click)="skipCurrentFlowCard()"
+                      [disabled]="actionLoading || ratingFlowAnimating || ratingFlowQueue.length < 2 || isConcluded"
+                    >
+                      Pular jogador
+                    </button>
+                    <button
+                      mat-flat-button
+                      color="primary"
+                      type="button"
+                      (click)="submitCurrentFlowVote()"
+                      [disabled]="actionLoading || ratingFlowAnimating || !ratingFlowSelectedScore || isConcluded"
+                    >
+                      Enviar nota e próximo
+                    </button>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+            </div>
+          } @else {
+            <div class="flow-done-state">
+              <h3>Avaliação concluída</h3>
+              <p class="muted">Você já avaliou todos os jogadores disponíveis neste racha.</p>
+              @if (ratedPlayersByMe.length > 0) {
+                <div class="rated-pill-list">
+                  @for (rated of ratedPlayersByMe; track rated.playerId) {
+                    <span class="status-chip success">{{ rated.name }}</span>
+                  }
                 </div>
               }
-            </mat-card-content>
-          </mat-card>
-        }
-      </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="rating-grid">
+          @for (card of ratingCards; track card.playerId) {
+            <mat-card class="rating-card">
+              <mat-card-header>
+                <mat-card-title>{{ card.name }}</mat-card-title>
+                <mat-card-subtitle>&#64;{{ card.username }}</mat-card-subtitle>
+              </mat-card-header>
+
+              <mat-card-content>
+                <mat-chip-set class="chip-line">
+                  <mat-chip>Gols: {{ card.matchGoals }}</mat-chip>
+                  <mat-chip>Assist.: {{ card.matchAssists }}</mat-chip>
+                  <mat-chip>{{ card.matchWins }}V/{{ card.matchDraws }}E/{{ card.matchLosses }}D</mat-chip>
+                </mat-chip-set>
+                <p class="muted">Nota média geral: {{ card.ratingAverage | number : '1.1-2' }}</p>
+
+                @if (card.alreadyRatedByMe) {
+                  <span class="status-chip success">Você já votou neste jogador</span>
+                }
+
+                @if (card.canVote) {
+                  <div class="vote-form">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Nota (1 a 5)</mat-label>
+                      <mat-select
+                        [value]="voteSelections[card.playerId]"
+                        (valueChange)="voteSelections[card.playerId] = $event"
+                      >
+                        <mat-option [value]="1">1</mat-option>
+                        <mat-option [value]="2">2</mat-option>
+                        <mat-option [value]="3">3</mat-option>
+                        <mat-option [value]="4">4</mat-option>
+                        <mat-option [value]="5">5</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+
+                    <button
+                      mat-flat-button
+                      color="primary"
+                      (click)="submitVote(card)"
+                      [disabled]="actionLoading || isConcluded"
+                    >
+                      Enviar nota
+                    </button>
+                  </div>
+                }
+              </mat-card-content>
+            </mat-card>
+          }
+        </div>
+      }
     </section>
 
     @if (authService.isAdmin) {
