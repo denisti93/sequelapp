@@ -1,22 +1,59 @@
 <mat-toolbar color="primary" class="topbar">
-  <div class="brand" routerLink="/peladas">
-    <mat-icon class="brand-icon">sports_soccer</mat-icon>
-    Sequelapp - Racha dos Sequelados
+  <div class="brand" routerLink="/peladas" aria-label="Ir para rachas">
+    <img
+      class="brand-logo"
+      src="assets/racha-logo.jpg"
+      alt="Logo do Racha"
+      width="36"
+      height="36"
+    />
+    <span class="brand-text">Sequelapp - Racha dos Sequelados</span>
   </div>
 
   <div class="spacer"></div>
 
   @if (authService.isLoggedIn) {
-    <nav class="menu-links">
+    <nav class="menu-links desktop-only">
       <a mat-button routerLink="/peladas" routerLinkActive="active-link">Rachas</a>
       <a mat-button routerLink="/ranking" routerLinkActive="active-link">Ranking</a>
     </nav>
 
-    <span class="user-pill">{{ authService.currentUser?.name }} ({{ authService.currentUser?.role }})</span>
-    <button mat-stroked-button color="accent" (click)="logout()">
+    <span class="user-pill desktop-only">
+      {{ authService.currentUser?.name }} ({{ authService.currentUser?.role }})
+    </span>
+
+    <button mat-stroked-button color="accent" class="desktop-only" (click)="logout()">
       <mat-icon>logout</mat-icon>
       Sair
     </button>
+
+    <button
+      mat-icon-button
+      class="mobile-menu-button"
+      [matMenuTriggerFor]="mobileMenu"
+      aria-label="Abrir menu"
+    >
+      <mat-icon>menu</mat-icon>
+    </button>
+
+    <mat-menu #mobileMenu="matMenu" xPosition="before">
+      <button mat-menu-item routerLink="/peladas">
+        <mat-icon>sports_soccer</mat-icon>
+        <span>Rachas</span>
+      </button>
+      <button mat-menu-item routerLink="/ranking">
+        <mat-icon>leaderboard</mat-icon>
+        <span>Ranking</span>
+      </button>
+      <button mat-menu-item disabled class="mobile-user-item">
+        <mat-icon>person</mat-icon>
+        <span>{{ authService.currentUser?.name }} ({{ authService.currentUser?.role }})</span>
+      </button>
+      <button mat-menu-item (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Sair</span>
+      </button>
+    </mat-menu>
   }
 </mat-toolbar>
 

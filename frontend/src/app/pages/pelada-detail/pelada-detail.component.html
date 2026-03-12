@@ -1,7 +1,7 @@
 <div class="page-container page-grid">
   <a mat-button color="primary" routerLink="/peladas">
     <mat-icon>arrow_back</mat-icon>
-    Voltar para historico
+    Voltar para histórico
   </a>
 
   @if (loading) {
@@ -19,15 +19,15 @@
           {{ pelada.happened ? 'Aconteceu' : 'Vai acontecer' }}
         </span>
         <span class="status-chip racha-status-chip">
-          {{ isConcluded ? 'Concluido' : 'Aberto' }}
+          {{ isConcluded ? 'Concluído' : 'Aberto' }}
         </span>
-        <span class="status-chip">Votacao: {{ ratingStatusLabel() }}</span>
+        <span class="status-chip">Votação: {{ ratingStatusLabel() }}</span>
         @if (isTournament) {
           <span class="status-chip tournament-highlight">
             @if (pelada.tournament?.isCompleted && pelada.tournament?.championTeamName) {
-              Campeao: {{ pelada.tournament?.championTeamName }}
+              Campeão: {{ pelada.tournament?.championTeamName }}
             } @else {
-              Lider atual: {{ tournamentLeaderName() }}
+              Líder atual: {{ tournamentLeaderName() }}
             }
           </span>
         }
@@ -50,7 +50,7 @@
               @if (isChampionTeam(team.id)) {
                 <p class="champion-tag">
                   <mat-icon>emoji_events</mat-icon>
-                  Campeao: time vencedor
+                  Campeão: time vencedor
                 </p>
               }
 
@@ -149,7 +149,7 @@
             <h3>Tabela do grupo</h3>
 
             @if (!pelada.tournament || pelada.tournament.standings.length === 0) {
-              <p class="muted">Tabela disponivel apos configurar os times.</p>
+              <p class="muted">Tabela disponível após configurar os times.</p>
             } @else {
               <div class="table-wrap standings-wrap">
                 <table class="standings-table">
@@ -225,7 +225,7 @@
                 </div>
 
                 <mat-form-field appearance="outline">
-                  <mat-label>Goleiros (separados por virgula)</mat-label>
+                  <mat-label>Goleiros (separados por vírgula)</mat-label>
                   <input matInput formControlName="goalkeepersText" />
                 </mat-form-field>
               </div>
@@ -252,7 +252,7 @@
 
                   <div class="form-grid">
                     <mat-form-field appearance="outline" class="small-number-field">
-                      <mat-label>Vitorias</mat-label>
+                      <mat-label>Vitórias</mat-label>
                       <input matInput type="number" min="0" formControlName="wins" />
                     </mat-form-field>
 
@@ -281,14 +281,14 @@
         <section class="panel">
           <h2 class="panel-title">Resultados por time</h2>
           <p class="muted">
-            Neste racha do tipo torneio, vitorias/empates/derrotas sao calculados automaticamente pelos
+            Neste racha do tipo torneio, vitórias/empates/derrotas são calculados automaticamente pelos
             placares dos confrontos.
           </p>
         </section>
       }
 
       <section class="panel">
-        <h2 class="panel-title">Gols e assistencias por jogador</h2>
+        <h2 class="panel-title">Gols e assistências por jogador</h2>
 
         <form [formGroup]="statsForm" (ngSubmit)="savePlayerStats()">
           <div formArrayName="stats" class="stats-grid">
@@ -303,7 +303,7 @@
                   </mat-form-field>
 
                   <mat-form-field appearance="outline" class="small-number-field">
-                    <mat-label>Assistencias</mat-label>
+                    <mat-label>Assistências</mat-label>
                     <input matInput type="number" min="0" formControlName="assists" />
                   </mat-form-field>
                 </div>
@@ -313,7 +313,7 @@
 
           <div class="form-actions">
             <button mat-flat-button color="primary" type="submit" [disabled]="actionLoading || isConcluded">
-              Salvar gols/assistencias
+              Salvar gols/assistências
             </button>
           </div>
         </form>
@@ -342,7 +342,7 @@
                 (click)="finishVoting()"
                 [disabled]="actionLoading || isConcluded"
               >
-                Finalizar votacao
+                Finalizar votação
               </button>
             }
             <button
@@ -358,7 +358,7 @@
       </div>
 
       @if (isConcluded) {
-        <p class="muted">Racha concluido: ajustes e novas notas estao bloqueados.</p>
+        <p class="muted">Racha concluído: ajustes e novas notas estão bloqueados.</p>
       }
 
       <div class="craque-layout" [class.admin-only-podium]="authService.isAdmin">
@@ -368,7 +368,7 @@
             @if (canCurrentUserVoteCraque) {
               <div class="craque-select-grid">
                 <mat-form-field appearance="outline">
-                  <mat-label>1o lugar</mat-label>
+                  <mat-label>1º lugar</mat-label>
                   <mat-select
                     [value]="craqueVoteSelections.firstUserId"
                     (valueChange)="craqueVoteSelections.firstUserId = $event"
@@ -385,7 +385,7 @@
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
-                  <mat-label>2o lugar</mat-label>
+                  <mat-label>2º lugar</mat-label>
                   <mat-select
                     [value]="craqueVoteSelections.secondUserId"
                     (valueChange)="craqueVoteSelections.secondUserId = $event"
@@ -402,7 +402,7 @@
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
-                  <mat-label>3o lugar</mat-label>
+                  <mat-label>3º lugar</mat-label>
                   <mat-select
                     [value]="craqueVoteSelections.thirdUserId"
                     (valueChange)="craqueVoteSelections.thirdUserId = $event"
@@ -425,29 +425,29 @@
                 (click)="submitCraqueVote()"
                 [disabled]="actionLoading || isConcluded"
               >
-                Salvar podio de craque
+                Salvar pódio de craque
               </button>
             } @else {
-              <p class="muted">A votacao de craque estara disponivel quando o ADM abrir as notas.</p>
+              <p class="muted">A votação de craque estará disponível quando o ADM abrir as notas.</p>
             }
           </div>
         }
 
         <div class="panel craque-podium-box">
-          <h3>Podio dos Craques</h3>
+          <h3>Pódio dos Craques</h3>
           <p class="muted">Total de votos de craque: {{ pelada.craquePodium.totalBallots }}</p>
 
           @if (pelada.craquePodium.top3.length === 0) {
-            <p class="muted">Ainda nao ha votos suficientes para formar o podio.</p>
+            <p class="muted">Ainda não há votos suficientes para formar o pódio.</p>
           } @else {
             <div class="podium-list">
               @for (item of pelada.craquePodium.top3; track item.playerId) {
                 <div class="podium-row">
-                  <span class="podium-position">{{ item.position }}o</span>
+                  <span class="podium-position">{{ item.position }}º</span>
                   <div class="podium-content">
                     <strong>{{ item.playerName }}</strong>
                     <small class="muted">
-                      {{ item.points }} pts ({{ item.firstPlaces }}x 1o, {{ item.secondPlaces }}x 2o, {{ item.thirdPlaces }}x 3o)
+                      {{ item.points }} pts ({{ item.firstPlaces }}x 1º, {{ item.secondPlaces }}x 2º, {{ item.thirdPlaces }}x 3º)
                     </small>
                   </div>
                 </div>
@@ -458,7 +458,7 @@
       </div>
 
       @if (ratingCards.length === 0) {
-        <p class="muted">Ainda nao ha jogadores disponiveis para votacao neste racha.</p>
+        <p class="muted">Ainda não há jogadores disponíveis para votação neste racha.</p>
       }
 
       <div class="rating-grid">
@@ -475,10 +475,10 @@
                 <mat-chip>Assist.: {{ card.matchAssists }}</mat-chip>
                 <mat-chip>{{ card.matchWins }}V/{{ card.matchDraws }}E/{{ card.matchLosses }}D</mat-chip>
               </mat-chip-set>
-              <p class="muted">Nota media geral: {{ card.ratingAverage | number : '1.1-2' }}</p>
+              <p class="muted">Nota média geral: {{ card.ratingAverage | number : '1.1-2' }}</p>
 
               @if (card.alreadyRatedByMe) {
-                <span class="status-chip success">Voce ja votou neste jogador</span>
+                <span class="status-chip success">Você já votou neste jogador</span>
               }
 
               @if (card.canVote) {
@@ -519,7 +519,7 @@
         <p class="muted">Clique no jogador para abrir a lista detalhada de quem votou e corrigir notas.</p>
 
         @if (voteGroups.length === 0) {
-          <p class="muted">Nenhuma nota registrada neste racha ate agora.</p>
+          <p class="muted">Nenhuma nota registrada neste racha até agora.</p>
         }
 
         <div class="vote-audit-grid">

@@ -134,7 +134,7 @@ export class PeladaListComponent implements OnInit {
   }
 
   rachaStatusLabel(status: PeladaSummary['status']): string {
-    return status === 'CONCLUDED' ? 'Concluido' : 'Aberto';
+    return status === 'CONCLUDED' ? 'Concluído' : 'Aberto';
   }
 
   rachaTypeLabel(type: PeladaSummary['type']): string {

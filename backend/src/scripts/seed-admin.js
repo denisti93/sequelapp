@@ -26,6 +26,7 @@ async function run() {
         username,
         passwordHash,
         role: 'ADM',
+        approvalStatus: 'APPROVED',
         initialRating: 3,
         ratingAverage: 3
       }

@@ -1,10 +1,13 @@
 export type UserRole = 'ADM' | 'JOGADOR';
+export type ApprovalStatus = 'PENDING' | 'APPROVED';
 
 export interface User {
   id: string;
   name: string;
   username: string;
   role: UserRole;
+  approvalStatus?: ApprovalStatus;
+  createdAt?: string;
   initialRating: number;
   ratingAverage: number;
   totalGoals: number;
@@ -18,7 +21,20 @@ export interface User {
   totalCraqueThirdPlaces: number;
 }
 
+export interface PendingApprovalUser {
+  id: string;
+  name: string;
+  username: string;
+  role: 'JOGADOR';
+  approvalStatus: 'PENDING';
+  createdAt: string;
+}
+
 export interface AuthResponse {
   token: string;
   user: User;
+}
+
+export interface SignupResponse {
+  message: string;
 }

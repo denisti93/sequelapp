@@ -24,6 +24,12 @@ const userSchema = new mongoose.Schema(
       default: 'JOGADOR',
       required: true
     },
+    approvalStatus: {
+      type: String,
+      enum: ['PENDING', 'APPROVED'],
+      default: 'APPROVED',
+      required: true
+    },
     initialRating: {
       type: Number,
       min: 1,

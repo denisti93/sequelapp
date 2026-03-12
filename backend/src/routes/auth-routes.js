@@ -17,12 +17,12 @@ function issueToken(fastify, user) {
 
 export async function authRoutes(fastify) {
   fastify.post('/signup', async (request, reply) => {
-    const { name, username, password } = request.body || {};
+    const { name, lastName, username, password } = request.body || {};
 
-    if (!name || !username || !password) {
+    if (!name || !lastName || !username || !password) {
       return reply
         .code(400)
-        .send({ message: 'Campos obrigatorios: name, username e password.' });
+        .send({ message: 'Campos obrigatorios: name, lastName, username e password.' });
     }
 
     if (String(password).length < 6) {
@@ -36,20 +36,19 @@ export async function authRoutes(fastify) {
       return reply.code(409).send({ message: 'Username ja cadastrado.' });
     }
 
-    const user = await User.create({
-      name,
+    await User.create({
+      name: `${String(name).trim()} ${String(lastName).trim()}`.trim(),
       username,
       role: 'JOGADOR',
+      approvalStatus: 'PENDING',
       passwordHash: await hashPassword(password),
       initialRating: 3,
       ratingAverage: 3
     });
 
-    const token = issueToken(fastify, user);
-
     return reply.code(201).send({
-      token,
-      user: user.toJSON()
+      message:
+        'Cadastro enviado com sucesso. Aguarde a aprovacao de um ADM para acessar o app.'
     });
   });
 
@@ -70,6 +69,13 @@ export async function authRoutes(fastify) {
     const isPasswordValid = await comparePassword(password, user.passwordHash);
     if (!isPasswordValid) {
       return reply.code(401).send({ message: 'Credenciais invalidas.' });
+    }
+
+    const approvalStatus = user.approvalStatus || 'APPROVED';
+    if (user.role === 'JOGADOR' && approvalStatus !== 'APPROVED') {
+      return reply.code(403).send({
+        message: 'Seu cadastro ainda nao foi aprovado por um ADM.'
+      });
     }
 
     const token = issueToken(fastify, user);

@@ -12,8 +12,38 @@ export async function userRoutes(fastify) {
     return user.toJSON();
   });
 
+  fastify.get(
+    '/pending',
+    {
+      preHandler: [authenticate, authorize('ADM')]
+    },
+    async () => {
+      const pendingUsers = await User.find(
+        {
+          role: 'JOGADOR',
+          approvalStatus: 'PENDING'
+        },
+        'name username role approvalStatus createdAt'
+      )
+        .sort({ createdAt: 1, name: 1 })
+        .lean();
+
+      return pendingUsers.map((user) => ({
+        id: String(user._id),
+        name: user.name,
+        username: user.username,
+        role: user.role,
+        approvalStatus: user.approvalStatus,
+        createdAt: user.createdAt
+      }));
+    }
+  );
+
   fastify.get('/', { preHandler: [authenticate] }, async () => {
-    const users = await User.find({ role: 'JOGADOR' })
+    const users = await User.find({
+      role: 'JOGADOR',
+      $or: [{ approvalStatus: 'APPROVED' }, { approvalStatus: { $exists: false } }]
+    })
       .sort({ totalGoals: -1, totalAssists: -1, ratingAverage: -1, name: 1 })
       .lean();
 
@@ -22,6 +52,7 @@ export async function userRoutes(fastify) {
       name: user.name,
       username: user.username,
       role: user.role,
+      approvalStatus: user.approvalStatus || 'APPROVED',
       ratingAverage: user.ratingAverage,
       totalGoals: user.totalGoals,
       totalAssists: user.totalAssists,
@@ -34,6 +65,34 @@ export async function userRoutes(fastify) {
       totalCraqueThirdPlaces: user.totalCraqueThirdPlaces || 0
     }));
   });
+
+  fastify.patch(
+    '/:id/approve',
+    {
+      preHandler: [authenticate, authorize('ADM')]
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+
+      const user = await User.findOneAndUpdate(
+        {
+          _id: id,
+          role: 'JOGADOR'
+        },
+        { $set: { approvalStatus: 'APPROVED' } },
+        { new: true }
+      );
+
+      if (!user) {
+        return reply.code(404).send({ message: 'Jogador nao encontrado.' });
+      }
+
+      return {
+        message: 'Jogador aprovado com sucesso.',
+        user: user.toJSON()
+      };
+    }
+  );
 
   fastify.patch(
     '/:id/initial-rating',

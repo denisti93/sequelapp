@@ -3,6 +3,27 @@
   min-width: 840px;
 }
 
+.pending-users-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 10px;
+}
+
+.pending-user-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pending-user-card p {
+  margin: 2px 0 0;
+}
+
 .mobile-ranking-list {
   display: none;
   gap: 10px;
@@ -36,6 +57,15 @@
 }
 
 @media (max-width: 760px) {
+  .pending-users-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pending-user-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .desktop-table {
     display: none;
   }

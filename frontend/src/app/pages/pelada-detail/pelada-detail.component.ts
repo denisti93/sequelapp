@@ -405,7 +405,7 @@ export class PeladaDetailComponent implements OnInit {
       return true;
     }
 
-    this.snackBar.open('Este racha foi concluido e nao permite novos ajustes.', 'Fechar', {
+    this.snackBar.open('Este racha foi concluído e não permite novos ajustes.', 'Fechar', {
       duration: 2800
     });
     return false;
@@ -453,7 +453,7 @@ export class PeladaDetailComponent implements OnInit {
 
     const players = rawTeams.flatMap((team) => team.players || []);
     if (new Set(players).size !== players.length) {
-      this.snackBar.open('Um jogador nao pode estar em mais de um time.', 'Fechar', {
+      this.snackBar.open('Um jogador não pode estar em mais de um time.', 'Fechar', {
         duration: 2800
       });
       return;
@@ -492,7 +492,7 @@ export class PeladaDetailComponent implements OnInit {
 
     if (this.isTournament) {
       this.snackBar.open(
-        'No torneio, os resultados por time sao calculados automaticamente pelos confrontos.',
+        'No torneio, os resultados por time são calculados automaticamente pelos confrontos.',
         'Fechar',
         { duration: 3200 }
       );
@@ -556,7 +556,7 @@ export class PeladaDetailComponent implements OnInit {
     const awayGoals = Number(awayGoalsRaw);
 
     if (!matchId || !Number.isInteger(homeGoals) || !Number.isInteger(awayGoals) || homeGoals < 0 || awayGoals < 0) {
-      this.snackBar.open('Informe placar com numeros inteiros >= 0 para os dois times.', 'Fechar', {
+      this.snackBar.open('Informe placar com números inteiros >= 0 para os dois times.', 'Fechar', {
         duration: 2800
       });
       return;
@@ -597,13 +597,13 @@ export class PeladaDetailComponent implements OnInit {
     this.actionLoading = true;
     this.peladaService.updatePlayerStats(this.peladaId, payload).subscribe({
       next: () => {
-        this.snackBar.open('Gols e assistencias atualizados.', 'Fechar', { duration: 2200 });
+        this.snackBar.open('Gols e assistências atualizados.', 'Fechar', { duration: 2200 });
         this.actionLoading = false;
         this.loadData();
       },
       error: (error) => {
         this.actionLoading = false;
-        this.snackBar.open(error?.error?.message || 'Falha ao atualizar estatisticas.', 'Fechar', {
+        this.snackBar.open(error?.error?.message || 'Falha ao atualizar estatísticas.', 'Fechar', {
           duration: 3200
         });
       }
@@ -622,13 +622,13 @@ export class PeladaDetailComponent implements OnInit {
     this.actionLoading = true;
     this.peladaService.openVoting(this.peladaId).subscribe({
       next: () => {
-        this.snackBar.open('Votacao aberta.', 'Fechar', { duration: 2200 });
+        this.snackBar.open('Votação aberta.', 'Fechar', { duration: 2200 });
         this.actionLoading = false;
         this.loadData();
       },
       error: (error) => {
         this.actionLoading = false;
-        this.snackBar.open(error?.error?.message || 'Falha ao abrir votacao.', 'Fechar', {
+        this.snackBar.open(error?.error?.message || 'Falha ao abrir votação.', 'Fechar', {
           duration: 3200
         });
       }
@@ -647,13 +647,13 @@ export class PeladaDetailComponent implements OnInit {
     this.actionLoading = true;
     this.peladaService.finishVoting(this.peladaId).subscribe({
       next: () => {
-        this.snackBar.open('Votacao finalizada.', 'Fechar', { duration: 2200 });
+        this.snackBar.open('Votação finalizada.', 'Fechar', { duration: 2200 });
         this.actionLoading = false;
         this.loadData();
       },
       error: (error) => {
         this.actionLoading = false;
-        this.snackBar.open(error?.error?.message || 'Falha ao finalizar votacao.', 'Fechar', {
+        this.snackBar.open(error?.error?.message || 'Falha ao finalizar votação.', 'Fechar', {
           duration: 3200
         });
       }
@@ -703,14 +703,14 @@ export class PeladaDetailComponent implements OnInit {
 
     const { firstUserId, secondUserId, thirdUserId } = this.craqueVoteSelections;
     if (!firstUserId || !secondUserId || !thirdUserId) {
-      this.snackBar.open('Selecione 1o, 2o e 3o lugar do craque do racha.', 'Fechar', {
+      this.snackBar.open('Selecione 1º, 2º e 3º lugar do craque do racha.', 'Fechar', {
         duration: 2400
       });
       return;
     }
 
     if (new Set([firstUserId, secondUserId, thirdUserId]).size !== 3) {
-      this.snackBar.open('Os tres colocados devem ser jogadores diferentes.', 'Fechar', {
+      this.snackBar.open('Os três colocados devem ser jogadores diferentes.', 'Fechar', {
         duration: 2400
       });
       return;
@@ -720,7 +720,7 @@ export class PeladaDetailComponent implements OnInit {
       this.authService.currentUser &&
       [firstUserId, secondUserId, thirdUserId].includes(this.authService.currentUser.id)
     ) {
-      this.snackBar.open('Nao e permitido colocar a si mesmo no podio de craque.', 'Fechar', {
+      this.snackBar.open('Não é permitido colocar a si mesmo no pódio de craque.', 'Fechar', {
         duration: 2400
       });
       return;
@@ -735,13 +735,13 @@ export class PeladaDetailComponent implements OnInit {
       })
       .subscribe({
         next: () => {
-          this.snackBar.open('Podio de craque registrado.', 'Fechar', { duration: 2200 });
+          this.snackBar.open('Pódio de craque registrado.', 'Fechar', { duration: 2200 });
           this.actionLoading = false;
           this.loadData();
         },
         error: (error) => {
           this.actionLoading = false;
-          this.snackBar.open(error?.error?.message || 'Falha ao registrar podio de craque.', 'Fechar', {
+          this.snackBar.open(error?.error?.message || 'Falha ao registrar pódio de craque.', 'Fechar', {
             duration: 3200
           });
         }
@@ -756,7 +756,7 @@ export class PeladaDetailComponent implements OnInit {
     this.actionLoading = true;
     this.peladaService.concludeRacha(this.peladaId).subscribe({
       next: () => {
-        this.snackBar.open('Racha concluido. Ajustes e notas foram bloqueados.', 'Fechar', {
+        this.snackBar.open('Racha concluído. Ajustes e notas foram bloqueados.', 'Fechar', {
           duration: 2600
         });
         this.actionLoading = false;

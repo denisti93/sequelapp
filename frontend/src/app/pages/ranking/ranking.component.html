@@ -1,6 +1,33 @@
 <div class="page-container page-grid">
   @if (authService.isAdmin) {
     <section class="panel">
+      <h2 class="panel-title">Aprovação de novos jogadores</h2>
+
+      @if (pendingUsers.length === 0) {
+        <p class="muted">Não há jogadores pendentes de aprovação.</p>
+      } @else {
+        <div class="pending-users-grid">
+          @for (user of pendingUsers; track user.id) {
+            <article class="pending-user-card">
+              <div>
+                <strong>{{ user.name }}</strong>
+                <p class="muted">&#64;{{ user.username }}</p>
+              </div>
+              <button
+                mat-flat-button
+                color="primary"
+                (click)="approveUser(user.id)"
+                [disabled]="loading || approvingUserId === user.id"
+              >
+                Aprovar jogador
+              </button>
+            </article>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="panel">
       <h2 class="panel-title">Ajustar nota inicial de jogador</h2>
       <form [formGroup]="ratingForm" (ngSubmit)="updateInitialRating()" class="form-grid">
         <mat-form-field appearance="outline">

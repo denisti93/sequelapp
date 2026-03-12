@@ -44,6 +44,7 @@ export class SignupComponent {
   readonly form = this.formBuilder.group(
     {
       name: ['', [Validators.required]],
+      lastName: ['', [Validators.required]],
       username: ['', [Validators.required]],
       password: ['', [Validators.required, Validators.minLength(6)]],
       confirmPassword: ['', [Validators.required]]
@@ -66,14 +67,18 @@ export class SignupComponent {
       return;
     }
 
-    const { name, username, password } = this.form.getRawValue();
+    const { name, lastName, username, password } = this.form.getRawValue();
     this.loading = true;
 
-    this.authService.signup(name ?? '', username ?? '', password ?? '').subscribe({
-      next: () => {
+    this.authService.signup(name ?? '', lastName ?? '', username ?? '', password ?? '').subscribe({
+      next: (response) => {
         this.loading = false;
-        this.snackBar.open('Cadastro realizado com sucesso.', 'Fechar', { duration: 2500 });
-        this.router.navigate(['/peladas']);
+        this.snackBar.open(
+          response?.message || 'Cadastro enviado para aprovação do ADM.',
+          'Fechar',
+          { duration: 3200 }
+        );
+        this.router.navigate(['/login']);
       },
       error: (error) => {
         this.loading = false;

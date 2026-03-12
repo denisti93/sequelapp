@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AuthResponse, User } from '../../models/user';
+import { AuthResponse, SignupResponse, User } from '../../models/user';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -43,10 +43,13 @@ export class AuthService {
       .pipe(tap((response) => this.saveSession(response)));
   }
 
-  signup(name: string, username: string, password: string): Observable<AuthResponse> {
-    return this.http
-      .post<AuthResponse>(`${this.apiUrl}/auth/signup`, { name, username, password })
-      .pipe(tap((response) => this.saveSession(response)));
+  signup(name: string, lastName: string, username: string, password: string): Observable<SignupResponse> {
+    return this.http.post<SignupResponse>(`${this.apiUrl}/auth/signup`, {
+      name,
+      lastName,
+      username,
+      password
+    });
   }
 
   logout(): void {

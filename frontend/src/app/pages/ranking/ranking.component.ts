@@ -10,7 +10,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { AuthService } from '../../core/services/auth.service';
 import { UserService } from '../../core/services/user.service';
-import { User } from '../../models/user';
+import { PendingApprovalUser, User } from '../../models/user';
 
 @Component({
   selector: 'app-ranking',
@@ -32,6 +32,8 @@ import { User } from '../../models/user';
 export class RankingComponent implements OnInit {
   loading = false;
   users: User[] = [];
+  pendingUsers: PendingApprovalUser[] = [];
+  approvingUserId: string | null = null;
   readonly displayedColumns = [
     'name',
     'totalGoals',
@@ -56,6 +58,9 @@ export class RankingComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadUsers();
+    if (this.authService.isAdmin) {
+      this.loadPendingUsers();
+    }
   }
 
   loadUsers(): void {
@@ -68,6 +73,47 @@ export class RankingComponent implements OnInit {
       error: (error) => {
         this.loading = false;
         this.snackBar.open(error?.error?.message || 'Falha ao carregar ranking.', 'Fechar', {
+          duration: 3000
+        });
+      }
+    });
+  }
+
+  loadPendingUsers(): void {
+    if (!this.authService.isAdmin) {
+      return;
+    }
+
+    this.userService.getPendingUsers().subscribe({
+      next: (users) => {
+        this.pendingUsers = users;
+      },
+      error: (error) => {
+        this.snackBar.open(error?.error?.message || 'Falha ao carregar aprovações pendentes.', 'Fechar', {
+          duration: 3000
+        });
+      }
+    });
+  }
+
+  approveUser(userId: string): void {
+    if (!this.authService.isAdmin || this.approvingUserId) {
+      return;
+    }
+
+    this.approvingUserId = userId;
+    this.userService.approveUser(userId).subscribe({
+      next: (response) => {
+        this.snackBar.open(response?.message || 'Jogador aprovado com sucesso.', 'Fechar', {
+          duration: 2500
+        });
+        this.approvingUserId = null;
+        this.loadPendingUsers();
+        this.loadUsers();
+      },
+      error: (error) => {
+        this.approvingUserId = null;
+        this.snackBar.open(error?.error?.message || 'Falha ao aprovar jogador.', 'Fechar', {
           duration: 3000
         });
       }

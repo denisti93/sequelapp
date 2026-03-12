@@ -20,7 +20,7 @@
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -29,10 +29,17 @@
   text-shadow: 0 2px 10px rgba(40, 12, 80, 0.8);
 }
 
-.brand-icon {
-  font-size: 18px;
-  width: 18px;
-  height: 18px;
+.brand-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 185, 107, 0.85);
+  box-shadow: 0 8px 14px -8px rgba(10, 5, 28, 0.8);
+}
+
+.brand-text {
+  line-height: 1.1;
 }
 
 .spacer {
@@ -44,11 +51,19 @@
   gap: 6px;
 }
 
+.desktop-only {
+  display: inline-flex;
+}
+
+.mobile-menu-button {
+  display: none;
+  color: #ffb45b !important;
+}
+
 .menu-links .mdc-button,
 .menu-links .mat-mdc-button-base,
 .topbar button,
-.user-pill,
-.brand-icon {
+.user-pill {
   color: #ffb45b !important;
 }
 
@@ -67,15 +82,36 @@
 
 @media (max-width: 800px) {
   .topbar {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     padding: 10px;
   }
 
   .spacer {
-    display: none;
+    display: block;
   }
 
-  .menu-links {
-    width: 100%;
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-menu-button {
+    display: inline-flex;
+  }
+
+  .brand-logo {
+    width: 32px;
+    height: 32px;
+  }
+
+  .brand {
+    min-width: 0;
+    max-width: calc(100% - 64px);
+  }
+
+  .brand-text {
+    font-size: 0.92rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
