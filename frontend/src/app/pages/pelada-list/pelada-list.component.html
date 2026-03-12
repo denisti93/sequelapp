@@ -52,6 +52,14 @@
           <input matInput type="date" formControlName="date" />
         </mat-form-field>
 
+        <mat-form-field appearance="outline">
+          <mat-label>Tipo</mat-label>
+          <mat-select formControlName="type">
+            <mat-option value="NORMAL">Racha comum</mat-option>
+            <mat-option value="TOURNAMENT">Torneio</mat-option>
+          </mat-select>
+        </mat-form-field>
+
         <div class="form-actions">
           <button mat-flat-button color="primary" type="submit" [disabled]="loading">
             <mat-icon>add_circle</mat-icon>
@@ -74,6 +82,15 @@
         <ng-container matColumnDef="date">
           <th mat-header-cell *matHeaderCellDef>Data</th>
           <td mat-cell *matCellDef="let pelada">{{ pelada.date | date : 'dd/MM/yyyy' : 'UTC' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef>Tipo</th>
+          <td mat-cell *matCellDef="let pelada">
+            <span class="status-chip type-chip" [class.tournament]="pelada.type === 'TOURNAMENT'">
+              {{ rachaTypeLabel(pelada.type) }}
+            </span>
+          </td>
         </ng-container>
 
         <ng-container matColumnDef="status">
@@ -110,6 +127,9 @@
         <article class="mobile-racha-card">
           <h3>{{ pelada.date | date : 'dd/MM/yyyy' : 'UTC' }}</h3>
           <div class="mobile-chip-row">
+            <span class="status-chip type-chip" [class.tournament]="pelada.type === 'TOURNAMENT'">
+              {{ rachaTypeLabel(pelada.type) }}
+            </span>
             <span class="status-chip" [class.success]="pelada.happened">
               {{ pelada.happened ? 'Aconteceu' : 'Vai acontecer' }}
             </span>

@@ -11,6 +11,7 @@ import {
 
 interface CreatePeladaInput {
   date: string;
+  type: 'NORMAL' | 'TOURNAMENT';
 }
 
 interface TeamInput {
@@ -60,6 +61,21 @@ export class PeladaService {
     return this.http.patch<{ message: string }>(`${this.apiUrl}/peladas/${id}/results`, {
       results
     });
+  }
+
+  updateTournamentMatch(
+    id: string,
+    matchId: string,
+    homeGoals: number,
+    awayGoals: number
+  ): Observable<{ message: string }> {
+    return this.http.patch<{ message: string }>(
+      `${this.apiUrl}/peladas/${id}/tournament-matches/${matchId}`,
+      {
+        homeGoals,
+        awayGoals
+      }
+    );
   }
 
   updatePlayerStats(id: string, stats: PlayerStatsInput[]): Observable<{ message: string }> {

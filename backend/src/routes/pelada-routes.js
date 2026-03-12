@@ -3,6 +3,11 @@ import { Pelada } from '../models/Pelada.js';
 import { User } from '../models/User.js';
 import { recalculateAllUsersStats } from '../services/stats-service.js';
 import { getParticipantIdSet, validateTeamsShape } from '../utils/pelada.js';
+import {
+  buildTournamentInfo,
+  generateDoubleRoundRobinMatches,
+  syncTeamResultsFromMatches
+} from '../utils/tournament.js';
 
 const CRAQUE_WEIGHTS = {
   firstUser: 5,
@@ -15,6 +20,7 @@ function formatPeladaSummary(pelada) {
   return {
     id: String(pelada._id),
     date,
+    type: pelada.type || 'NORMAL',
     happened: date.getTime() <= Date.now(),
     status: pelada.status || 'OPEN',
     votingStatus: pelada.votingStatus,
@@ -124,7 +130,7 @@ function buildCraquePodium(craqueVotes = [], usersById = new Map()) {
 
 export async function peladaRoutes(fastify) {
   fastify.get('/', { preHandler: [authenticate] }, async () => {
-    const peladas = await Pelada.find({}, 'date status votingStatus teams')
+    const peladas = await Pelada.find({}, 'date type status votingStatus teams')
       .sort({ date: -1 })
       .lean();
 
@@ -137,9 +143,14 @@ export async function peladaRoutes(fastify) {
       preHandler: [authenticate, authorize('ADM')]
     },
     async (request, reply) => {
-      const { date } = request.body || {};
+      const { date, type } = request.body || {};
       if (!date) {
         return reply.code(400).send({ message: 'Informe a data da pelada.' });
+      }
+
+      const normalizedType = String(type || 'NORMAL').toUpperCase();
+      if (!['NORMAL', 'TOURNAMENT'].includes(normalizedType)) {
+        return reply.code(400).send({ message: 'Tipo invalido. Use NORMAL ou TOURNAMENT.' });
       }
 
       const parsedDate = new Date(date);
@@ -149,8 +160,10 @@ export async function peladaRoutes(fastify) {
 
       const pelada = await Pelada.create({
         date: parsedDate,
+        type: normalizedType,
         createdBy: request.user.id,
         teams: [],
+        tournamentMatches: [],
         playerStats: [],
         votes: [],
         craqueVotes: [],
@@ -177,10 +190,15 @@ export async function peladaRoutes(fastify) {
     const users = await User.find({ _id: { $in: participantIds } }, 'name').lean();
     const usersById = new Map(users.map((user) => [String(user._id), user]));
     const craquePodium = buildCraquePodium(pelada.craqueVotes || [], usersById);
+    const isTournament = (pelada.type || 'NORMAL') === 'TOURNAMENT';
+    const tournamentInfo = isTournament
+      ? buildTournamentInfo(pelada.teams || [], pelada.tournamentMatches || [])
+      : null;
 
     return {
       id: String(pelada._id),
       date: pelada.date,
+      type: pelada.type || 'NORMAL',
       happened: new Date(pelada.date).getTime() <= Date.now(),
       status: pelada.status || 'OPEN',
       votingStatus: pelada.votingStatus,
@@ -206,6 +224,7 @@ export async function peladaRoutes(fastify) {
         assists: stat.assists || 0
       })),
       votesCount: (pelada.votes || []).length,
+      tournament: tournamentInfo,
       craquePodium
     };
   });
@@ -259,6 +278,13 @@ export async function peladaRoutes(fastify) {
       pelada.craqueVotes = [];
       pelada.votingStatus = 'CLOSED';
 
+      if ((pelada.type || 'NORMAL') === 'TOURNAMENT') {
+        pelada.tournamentMatches = generateDoubleRoundRobinMatches(pelada.teams);
+        syncTeamResultsFromMatches(pelada.teams, pelada.tournamentMatches);
+      } else {
+        pelada.tournamentMatches = [];
+      }
+
       await pelada.save();
       await recalculateAllUsersStats();
 
@@ -286,6 +312,12 @@ export async function peladaRoutes(fastify) {
       }
       if (!ensureEditableRacha(pelada, reply)) {
         return;
+      }
+
+      if ((pelada.type || 'NORMAL') === 'TOURNAMENT') {
+        return reply.code(400).send({
+          message: 'Para torneio, os resultados sao calculados automaticamente pelos placares dos confrontos.'
+        });
       }
 
       if (!pelada.teams || pelada.teams.length === 0) {
@@ -336,6 +368,60 @@ export async function peladaRoutes(fastify) {
       await recalculateAllUsersStats();
 
       return { message: 'Resultados da pelada atualizados.' };
+    }
+  );
+
+  fastify.patch(
+    '/:id/tournament-matches/:matchId',
+    {
+      preHandler: [authenticate, authorize('ADM')]
+    },
+    async (request, reply) => {
+      const { matchId, id } = request.params;
+      const { homeGoals, awayGoals } = request.body || {};
+
+      const parsedHomeGoals = Number(homeGoals);
+      const parsedAwayGoals = Number(awayGoals);
+
+      if (
+        !Number.isInteger(parsedHomeGoals) ||
+        !Number.isInteger(parsedAwayGoals) ||
+        parsedHomeGoals < 0 ||
+        parsedAwayGoals < 0
+      ) {
+        return reply.code(400).send({
+          message: 'Informe homeGoals e awayGoals como inteiros >= 0.'
+        });
+      }
+
+      const pelada = await Pelada.findById(id);
+      if (!pelada) {
+        return reply.code(404).send({ message: 'Pelada nao encontrada.' });
+      }
+      if (!ensureEditableRacha(pelada, reply)) {
+        return;
+      }
+
+      if ((pelada.type || 'NORMAL') !== 'TOURNAMENT') {
+        return reply.code(400).send({
+          message: 'Este endpoint e exclusivo para rachas do tipo torneio.'
+        });
+      }
+
+      const match = (pelada.tournamentMatches || []).find((item) => String(item._id) === String(matchId));
+      if (!match) {
+        return reply.code(404).send({ message: 'Confronto nao encontrado.' });
+      }
+
+      match.homeGoals = parsedHomeGoals;
+      match.awayGoals = parsedAwayGoals;
+
+      syncTeamResultsFromMatches(pelada.teams, pelada.tournamentMatches);
+
+      await pelada.save();
+      await recalculateAllUsersStats();
+
+      return { message: 'Placar atualizado com sucesso.' };
     }
   );
 

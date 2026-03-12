@@ -77,6 +77,7 @@ export class PeladaDetailComponent implements OnInit {
   craqueVoteSelections: CraqueVoteSelection = this.emptyCraqueVoteSelections();
   voteGroups: Array<{ toUserId: string; toUserName: string; votes: VoteDetail[] }> = [];
   adminVoteSelections: Record<string, number> = {};
+  tournamentRoundGroups: Array<{ round: number; matchIndexes: number[] }> = [];
 
   readonly teamForm = this.formBuilder.group({
     teams: this.formBuilder.array([])
@@ -88,6 +89,10 @@ export class PeladaDetailComponent implements OnInit {
 
   readonly statsForm = this.formBuilder.group({
     stats: this.formBuilder.array([])
+  });
+
+  readonly tournamentForm = this.formBuilder.group({
+    matches: this.formBuilder.array([])
   });
 
   constructor(
@@ -109,6 +114,14 @@ export class PeladaDetailComponent implements OnInit {
 
   get statsArray(): UntypedFormArray {
     return this.statsForm.get('stats') as UntypedFormArray;
+  }
+
+  get tournamentMatchesArray(): UntypedFormArray {
+    return this.tournamentForm.get('matches') as UntypedFormArray;
+  }
+
+  get isTournament(): boolean {
+    return (this.pelada?.type || 'NORMAL') === 'TOURNAMENT';
   }
 
   ngOnInit(): void {
@@ -140,6 +153,7 @@ export class PeladaDetailComponent implements OnInit {
         this.buildTeamForm(pelada);
         this.buildResultsForm(pelada);
         this.buildStatsForm(pelada);
+        this.buildTournamentForm(pelada);
         this.applyRatingCards(rating);
         this.applyVoteDetails(votes?.votes || []);
         this.updateFormEditability();
@@ -298,6 +312,41 @@ export class PeladaDetailComponent implements OnInit {
     }
   }
 
+  private buildTournamentForm(pelada: PeladaDetail): void {
+    this.tournamentMatchesArray.clear();
+    this.tournamentRoundGroups = [];
+
+    if (pelada.type !== 'TOURNAMENT') {
+      return;
+    }
+
+    const roundMap = new Map<number, number[]>();
+
+    for (const match of pelada.tournament?.matches || []) {
+      const formIndex = this.tournamentMatchesArray.length;
+      this.tournamentMatchesArray.push(
+        this.formBuilder.group({
+          matchId: [match.id],
+          round: [match.round],
+          homeTeamName: [match.homeTeamName],
+          awayTeamName: [match.awayTeamName],
+          homeGoals: [match.homeGoals, [Validators.min(0)]],
+          awayGoals: [match.awayGoals, [Validators.min(0)]]
+        })
+      );
+
+      const round = Number(match.round || 1);
+      if (!roundMap.has(round)) {
+        roundMap.set(round, []);
+      }
+      roundMap.get(round)?.push(formIndex);
+    }
+
+    this.tournamentRoundGroups = Array.from(roundMap.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([round, matchIndexes]) => ({ round, matchIndexes }));
+  }
+
   private applyRatingCards(rating: RatingCardsResponse): void {
     this.ratingCards = rating.cards;
     this.canCurrentUserVote = rating.canCurrentUserVote;
@@ -341,12 +390,14 @@ export class PeladaDetailComponent implements OnInit {
       this.teamForm.disable({ emitEvent: false });
       this.resultsForm.disable({ emitEvent: false });
       this.statsForm.disable({ emitEvent: false });
+      this.tournamentForm.disable({ emitEvent: false });
       return;
     }
 
     this.teamForm.enable({ emitEvent: false });
     this.resultsForm.enable({ emitEvent: false });
     this.statsForm.enable({ emitEvent: false });
+    this.tournamentForm.enable({ emitEvent: false });
   }
 
   private ensureNotConcluded(): boolean {
@@ -439,6 +490,15 @@ export class PeladaDetailComponent implements OnInit {
       return;
     }
 
+    if (this.isTournament) {
+      this.snackBar.open(
+        'No torneio, os resultados por time sao calculados automaticamente pelos confrontos.',
+        'Fechar',
+        { duration: 3200 }
+      );
+      return;
+    }
+
     if (!this.authService.isAdmin || this.resultsForm.invalid || this.actionLoading || !this.pelada) {
       this.resultsForm.markAllAsTouched();
       return;
@@ -454,6 +514,64 @@ export class PeladaDetailComponent implements OnInit {
       error: (error) => {
         this.actionLoading = false;
         this.snackBar.open(error?.error?.message || 'Falha ao atualizar resultados.', 'Fechar', {
+          duration: 3200
+        });
+      }
+    });
+  }
+
+  saveTournamentMatch(matchIndex: number): void {
+    if (!this.ensureNotConcluded()) {
+      return;
+    }
+
+    if (!this.authService.isAdmin || this.actionLoading || !this.pelada || !this.isTournament) {
+      return;
+    }
+
+    const control = this.tournamentMatchesArray.at(matchIndex);
+    if (!control) {
+      return;
+    }
+
+    const matchId = String(control.get('matchId')?.value || '');
+    const homeGoalsRaw = control.get('homeGoals')?.value;
+    const awayGoalsRaw = control.get('awayGoals')?.value;
+
+    if (
+      homeGoalsRaw === null ||
+      homeGoalsRaw === undefined ||
+      homeGoalsRaw === '' ||
+      awayGoalsRaw === null ||
+      awayGoalsRaw === undefined ||
+      awayGoalsRaw === ''
+    ) {
+      this.snackBar.open('Preencha os dois lados do placar para salvar.', 'Fechar', {
+        duration: 2800
+      });
+      return;
+    }
+
+    const homeGoals = Number(homeGoalsRaw);
+    const awayGoals = Number(awayGoalsRaw);
+
+    if (!matchId || !Number.isInteger(homeGoals) || !Number.isInteger(awayGoals) || homeGoals < 0 || awayGoals < 0) {
+      this.snackBar.open('Informe placar com numeros inteiros >= 0 para os dois times.', 'Fechar', {
+        duration: 2800
+      });
+      return;
+    }
+
+    this.actionLoading = true;
+    this.peladaService.updateTournamentMatch(this.peladaId, matchId, homeGoals, awayGoals).subscribe({
+      next: () => {
+        this.snackBar.open('Placar atualizado.', 'Fechar', { duration: 2200 });
+        this.actionLoading = false;
+        this.loadData();
+      },
+      error: (error) => {
+        this.actionLoading = false;
+        this.snackBar.open(error?.error?.message || 'Falha ao atualizar placar.', 'Fechar', {
           duration: 3200
         });
       }
@@ -702,5 +820,33 @@ export class PeladaDetailComponent implements OnInit {
     }
 
     return 'Fechada';
+  }
+
+  rachaTypeLabel(): string {
+    if (!this.pelada) {
+      return '-';
+    }
+
+    return this.pelada.type === 'TOURNAMENT' ? 'Torneio' : 'Racha comum';
+  }
+
+  tournamentLeaderName(): string {
+    if (!this.pelada?.tournament?.standings?.length) {
+      return '-';
+    }
+
+    return this.pelada.tournament.standings[0].teamName;
+  }
+
+  isChampionTeam(teamId: string): boolean {
+    return Boolean(this.isTournament && this.pelada?.tournament?.championTeamId === teamId);
+  }
+
+  formatMatchScore(homeGoals: number | null, awayGoals: number | null): string {
+    if (homeGoals === null || awayGoals === null) {
+      return 'x';
+    }
+
+    return `${homeGoals} x ${awayGoals}`;
   }
 }

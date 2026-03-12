@@ -1,9 +1,11 @@
 export type VotingStatus = 'CLOSED' | 'OPEN' | 'FINISHED';
 export type RachaStatus = 'OPEN' | 'CONCLUDED';
+export type RachaType = 'NORMAL' | 'TOURNAMENT';
 
 export interface PeladaSummary {
   id: string;
   date: string;
+  type: RachaType;
   happened: boolean;
   status: RachaStatus;
   votingStatus: VotingStatus;
@@ -50,15 +52,52 @@ export interface CraquePodium {
   top3: CraquePodiumItem[];
 }
 
+export interface TournamentMatch {
+  id: string;
+  round: number;
+  homeTeamId: string;
+  awayTeamId: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeGoals: number | null;
+  awayGoals: number | null;
+  isFinished: boolean;
+}
+
+export interface TournamentStanding {
+  position: number;
+  teamId: string;
+  teamName: string;
+  points: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDiff: number;
+  directPoints: number;
+}
+
+export interface TournamentInfo {
+  standings: TournamentStanding[];
+  matches: TournamentMatch[];
+  isCompleted: boolean;
+  championTeamId: string | null;
+  championTeamName: string | null;
+  totalMatches: number;
+}
+
 export interface PeladaDetail {
   id: string;
   date: string;
+  type: RachaType;
   happened: boolean;
   status: RachaStatus;
   votingStatus: VotingStatus;
   teams: PeladaTeam[];
   playerStats: PeladaPlayerStat[];
   votesCount: number;
+  tournament: TournamentInfo | null;
   craquePodium: CraquePodium;
 }
 

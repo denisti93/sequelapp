@@ -75,6 +75,36 @@ const playerStatSchema = new mongoose.Schema(
   }
 );
 
+const tournamentMatchSchema = new mongoose.Schema(
+  {
+    homeTeamId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true
+    },
+    awayTeamId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true
+    },
+    round: {
+      type: Number,
+      required: true
+    },
+    homeGoals: {
+      type: Number,
+      min: 0,
+      default: null
+    },
+    awayGoals: {
+      type: Number,
+      min: 0,
+      default: null
+    }
+  },
+  {
+    _id: true
+  }
+);
+
 const teamSchema = new mongoose.Schema(
   {
     name: {
@@ -123,12 +153,19 @@ const peladaSchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    type: {
+      type: String,
+      enum: ['NORMAL', 'TOURNAMENT'],
+      default: 'NORMAL',
+      required: true
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true
     },
     teams: [teamSchema],
+    tournamentMatches: [tournamentMatchSchema],
     playerStats: [playerStatSchema],
     votingStatus: {
       type: String,

@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
@@ -27,6 +28,7 @@ import { User } from '../../models/user';
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     MatIconModule,
     MatTableModule,
     MatSnackBarModule,
@@ -39,11 +41,12 @@ export class PeladaListComponent implements OnInit {
   loading = false;
   summaryLoading = false;
   peladas: PeladaSummary[] = [];
-  readonly displayedColumns = ['date', 'status', 'votingStatus', 'actions'];
+  readonly displayedColumns = ['date', 'type', 'status', 'votingStatus', 'actions'];
   mySummary: User | null = null;
 
   readonly createForm = this.formBuilder.group({
-    date: ['', Validators.required]
+    date: ['', Validators.required],
+    type: ['NORMAL', Validators.required]
   });
 
   constructor(
@@ -83,16 +86,22 @@ export class PeladaListComponent implements OnInit {
       return;
     }
 
-    const date = this.createForm.value.date;
-    if (!date) {
+    const { date, type } = this.createForm.getRawValue();
+    if (!date || !type) {
       return;
     }
 
     this.loading = true;
 
-    this.peladaService.createPelada({ date }).subscribe({
+    this.peladaService.createPelada({
+      date,
+      type: type as 'NORMAL' | 'TOURNAMENT'
+    }).subscribe({
       next: () => {
-        this.createForm.reset();
+        this.createForm.reset({
+          date: '',
+          type: 'NORMAL'
+        });
         this.snackBar.open('Racha criado com sucesso.', 'Fechar', { duration: 2500 });
         this.loadPeladas();
       },
@@ -126,5 +135,9 @@ export class PeladaListComponent implements OnInit {
 
   rachaStatusLabel(status: PeladaSummary['status']): string {
     return status === 'CONCLUDED' ? 'Concluido' : 'Aberto';
+  }
+
+  rachaTypeLabel(type: PeladaSummary['type']): string {
+    return type === 'TOURNAMENT' ? 'Torneio' : 'Racha comum';
   }
 }

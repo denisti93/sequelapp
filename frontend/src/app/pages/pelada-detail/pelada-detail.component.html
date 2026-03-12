@@ -9,9 +9,12 @@
   }
 
   @if (pelada) {
-    <section class="panel">
+    <section class="panel" [class.tournament-hero]="isTournament">
       <h2 class="panel-title">Racha de {{ pelada.date | date : 'dd/MM/yyyy' : 'UTC' }}</h2>
       <div class="summary-row">
+        <span class="status-chip type-chip" [class.tournament]="isTournament">
+          Tipo: {{ rachaTypeLabel() }}
+        </span>
         <span class="status-chip" [class.success]="pelada.happened">
           {{ pelada.happened ? 'Aconteceu' : 'Vai acontecer' }}
         </span>
@@ -19,6 +22,15 @@
           {{ isConcluded ? 'Concluido' : 'Aberto' }}
         </span>
         <span class="status-chip">Votacao: {{ ratingStatusLabel() }}</span>
+        @if (isTournament) {
+          <span class="status-chip tournament-highlight">
+            @if (pelada.tournament?.isCompleted && pelada.tournament?.championTeamName) {
+              Campeao: {{ pelada.tournament?.championTeamName }}
+            } @else {
+              Lider atual: {{ tournamentLeaderName() }}
+            }
+          </span>
+        }
         <span class="muted">Votos registrados: {{ pelada.votesCount }}</span>
       </div>
     </section>
@@ -35,6 +47,13 @@
               </mat-card-subtitle>
             </mat-card-header>
             <mat-card-content>
+              @if (isChampionTeam(team.id)) {
+                <p class="champion-tag">
+                  <mat-icon>emoji_events</mat-icon>
+                  Campeao: time vencedor
+                </p>
+              }
+
               <p class="muted">Jogadores</p>
               <ul>
                 @for (player of team.players; track player.id) {
@@ -50,6 +69,125 @@
         }
       </div>
     </section>
+
+    @if (isTournament) {
+      <section class="panel tournament-panel">
+        <h2 class="panel-title">Torneio: partidas e tabela do grupo</h2>
+        <div class="tournament-layout">
+          <section class="panel fixture-panel">
+            <h3>Partidas</h3>
+
+            @if (tournamentMatchesArray.length === 0) {
+              <p class="muted">Salve os times para gerar os confrontos do torneio.</p>
+            } @else {
+              <form [formGroup]="tournamentForm" class="round-form">
+                <div formArrayName="matches" class="round-stack">
+                  @for (roundGroup of tournamentRoundGroups; track roundGroup.round; let isFirst = $first) {
+                    <details class="round-group" [attr.open]="isFirst ? '' : null">
+                      <summary class="round-summary">
+                        <strong>Rodada {{ roundGroup.round }}</strong>
+                        <span class="status-chip">{{ roundGroup.matchIndexes.length }} jogo(s)</span>
+                      </summary>
+
+                      <div class="round-matches">
+                        @for (matchIndex of roundGroup.matchIndexes; track matchIndex) {
+                          <div class="fixture-row" [formGroupName]="matchIndex">
+                            <strong class="team-name team-home">
+                              {{ tournamentMatchesArray.at(matchIndex).get('homeTeamName')?.value }}
+                            </strong>
+
+                            <div class="fixture-score">
+                              @if (authService.isAdmin) {
+                                <div class="score-input-group">
+                                  <mat-form-field appearance="outline" class="match-goal-field">
+                                    <mat-label>Casa</mat-label>
+                                    <input matInput type="number" min="0" formControlName="homeGoals" />
+                                  </mat-form-field>
+                                  <span class="score-separator">x</span>
+                                  <mat-form-field appearance="outline" class="match-goal-field">
+                                    <mat-label>Fora</mat-label>
+                                    <input matInput type="number" min="0" formControlName="awayGoals" />
+                                  </mat-form-field>
+                                </div>
+
+                                <button
+                                  mat-icon-button
+                                  color="primary"
+                                  type="button"
+                                  (click)="saveTournamentMatch(matchIndex)"
+                                  [disabled]="actionLoading || isConcluded"
+                                  aria-label="Salvar placar"
+                                >
+                                  <mat-icon>check_circle</mat-icon>
+                                </button>
+                              } @else {
+                                <strong class="score-readonly">
+                                  {{
+                                    formatMatchScore(
+                                      tournamentMatchesArray.at(matchIndex).get('homeGoals')?.value,
+                                      tournamentMatchesArray.at(matchIndex).get('awayGoals')?.value
+                                    )
+                                  }}
+                                </strong>
+                              }
+                            </div>
+
+                            <strong class="team-name team-away">
+                              {{ tournamentMatchesArray.at(matchIndex).get('awayTeamName')?.value }}
+                            </strong>
+                          </div>
+                        }
+                      </div>
+                    </details>
+                  }
+                </div>
+              </form>
+            }
+          </section>
+
+          <section class="panel standings-panel">
+            <h3>Tabela do grupo</h3>
+
+            @if (!pelada.tournament || pelada.tournament.standings.length === 0) {
+              <p class="muted">Tabela disponivel apos configurar os times.</p>
+            } @else {
+              <div class="table-wrap standings-wrap">
+                <table class="standings-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Time</th>
+                      <th>Pts</th>
+                      <th>V</th>
+                      <th>E</th>
+                      <th>D</th>
+                      <th>GP</th>
+                      <th>GC</th>
+                      <th>SG</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (standing of pelada.tournament.standings; track standing.teamId) {
+                      <tr [class.leader-row]="standing.position === 1">
+                        <td>{{ standing.position }}</td>
+                        <td>{{ standing.teamName }}</td>
+                        <td><strong>{{ standing.points }}</strong></td>
+                        <td>{{ standing.wins }}</td>
+                        <td>{{ standing.draws }}</td>
+                        <td>{{ standing.losses }}</td>
+                        <td>{{ standing.goalsFor }}</td>
+                        <td>{{ standing.goalsAgainst }}</td>
+                        <td>{{ standing.goalDiff }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </section>
+        </div>
+      </section>
+    }
 
     @if (authService.isAdmin) {
       <section class="panel">
@@ -102,42 +240,52 @@
         </form>
       </section>
 
-      <section class="panel">
-        <h2 class="panel-title">Resultados por time</h2>
+      @if (!isTournament) {
+        <section class="panel">
+          <h2 class="panel-title">Resultados por time</h2>
 
-        <form [formGroup]="resultsForm" (ngSubmit)="saveResults()" class="results-grid">
-          <div formArrayName="results" class="results-grid">
-            @for (resultCtrl of resultsArray.controls; track resultCtrl; let i = $index) {
-              <div [formGroupName]="i" class="panel result-card">
-                <h3>{{ resultCtrl.get('teamName')?.value }}</h3>
+          <form [formGroup]="resultsForm" (ngSubmit)="saveResults()" class="results-grid">
+            <div formArrayName="results" class="results-grid">
+              @for (resultCtrl of resultsArray.controls; track resultCtrl; let i = $index) {
+                <div [formGroupName]="i" class="panel result-card">
+                  <h3>{{ resultCtrl.get('teamName')?.value }}</h3>
 
-                <div class="form-grid">
-                  <mat-form-field appearance="outline" class="small-number-field">
-                    <mat-label>Vitorias</mat-label>
-                    <input matInput type="number" min="0" formControlName="wins" />
-                  </mat-form-field>
+                  <div class="form-grid">
+                    <mat-form-field appearance="outline" class="small-number-field">
+                      <mat-label>Vitorias</mat-label>
+                      <input matInput type="number" min="0" formControlName="wins" />
+                    </mat-form-field>
 
-                  <mat-form-field appearance="outline" class="small-number-field">
-                    <mat-label>Empates</mat-label>
-                    <input matInput type="number" min="0" formControlName="draws" />
-                  </mat-form-field>
+                    <mat-form-field appearance="outline" class="small-number-field">
+                      <mat-label>Empates</mat-label>
+                      <input matInput type="number" min="0" formControlName="draws" />
+                    </mat-form-field>
 
-                  <mat-form-field appearance="outline" class="small-number-field">
-                    <mat-label>Derrotas</mat-label>
-                    <input matInput type="number" min="0" formControlName="losses" />
-                  </mat-form-field>
+                    <mat-form-field appearance="outline" class="small-number-field">
+                      <mat-label>Derrotas</mat-label>
+                      <input matInput type="number" min="0" formControlName="losses" />
+                    </mat-form-field>
+                  </div>
                 </div>
-              </div>
-            }
-          </div>
+              }
+            </div>
 
-          <div class="form-actions">
-            <button mat-flat-button color="primary" type="submit" [disabled]="actionLoading || isConcluded">
-              Salvar resultados
-            </button>
-          </div>
-        </form>
-      </section>
+            <div class="form-actions">
+              <button mat-flat-button color="primary" type="submit" [disabled]="actionLoading || isConcluded">
+                Salvar resultados
+              </button>
+            </div>
+          </form>
+        </section>
+      } @else {
+        <section class="panel">
+          <h2 class="panel-title">Resultados por time</h2>
+          <p class="muted">
+            Neste racha do tipo torneio, vitorias/empates/derrotas sao calculados automaticamente pelos
+            placares dos confrontos.
+          </p>
+        </section>
+      }
 
       <section class="panel">
         <h2 class="panel-title">Gols e assistencias por jogador</h2>

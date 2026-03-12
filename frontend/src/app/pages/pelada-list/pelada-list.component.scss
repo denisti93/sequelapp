@@ -34,6 +34,15 @@
   color: #c2410c;
 }
 
+.type-chip {
+  background: linear-gradient(90deg, #ece0ff, #f7eeff);
+}
+
+.type-chip.tournament {
+  background: linear-gradient(90deg, #f97316, #7c3aed);
+  color: #fff7ed;
+}
+
 .mobile-racha-list {
   display: none;
   gap: 10px;
