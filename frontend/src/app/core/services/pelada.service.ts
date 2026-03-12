@@ -91,6 +91,13 @@ export class PeladaService {
     });
   }
 
+  submitCraqueVote(
+    id: string,
+    payload: { firstUserId: string; secondUserId: string; thirdUserId: string }
+  ): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/peladas/${id}/craque-vote`, payload);
+  }
+
   getVoteDetails(id: string): Observable<VoteDetailsResponse> {
     return this.http.get<VoteDetailsResponse>(`${this.apiUrl}/peladas/${id}/votes/details`);
   }

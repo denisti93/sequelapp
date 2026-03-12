@@ -58,6 +58,57 @@
   flex-wrap: wrap;
 }
 
+.craque-layout {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.craque-vote-box,
+.craque-podium-box {
+  display: grid;
+  gap: 10px;
+}
+
+.craque-select-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.podium-list {
+  display: grid;
+  gap: 8px;
+}
+
+.podium-row {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.podium-position {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #6d28d9, #f97316);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.podium-content {
+  display: grid;
+  gap: 2px;
+}
+
 .rating-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -92,23 +143,45 @@
 }
 
 .vote-audit-group {
-  display: grid;
-  gap: 10px;
+  display: block;
+  padding: 0;
+}
+
+.vote-audit-summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid transparent;
+}
+
+.vote-audit-summary::-webkit-details-marker {
+  display: none;
+}
+
+.vote-audit-group[open] .vote-audit-summary {
+  border-bottom-color: var(--border);
+  background: linear-gradient(90deg, #f4e9ff, #ffe9d8);
 }
 
 .vote-audit-list {
   display: grid;
   gap: 8px;
+  padding: 12px;
 }
 
 .vote-audit-row {
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 10px;
+  padding: 12px;
   display: flex;
   justify-content: space-between;
   gap: 12px;
   align-items: flex-start;
+  background: #fff;
 }
 
 .vote-audit-row p {
@@ -132,6 +205,14 @@ h3 {
 }
 
 @media (max-width: 860px) {
+  .craque-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .craque-select-grid {
+    grid-template-columns: 1fr;
+  }
+
   .team-grid,
   .team-form-grid,
   .results-grid,

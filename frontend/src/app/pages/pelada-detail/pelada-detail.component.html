@@ -190,6 +190,100 @@
         <p class="muted">Racha concluido: ajustes e novas notas estao bloqueados.</p>
       }
 
+      <div class="craque-layout">
+        <div class="panel craque-vote-box">
+          <h3>Craque do Racha (Top 3)</h3>
+          @if (canCurrentUserVoteCraque) {
+            <div class="craque-select-grid">
+              <mat-form-field appearance="outline">
+                <mat-label>1o lugar</mat-label>
+                <mat-select
+                  [value]="craqueVoteSelections.firstUserId"
+                  (valueChange)="craqueVoteSelections.firstUserId = $event"
+                >
+                  @for (card of ratingCards; track card.playerId) {
+                    <mat-option
+                      [value]="card.playerId"
+                      [disabled]="isCraqueOptionDisabled(card.playerId, 'firstUserId')"
+                    >
+                      {{ card.name }}
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>2o lugar</mat-label>
+                <mat-select
+                  [value]="craqueVoteSelections.secondUserId"
+                  (valueChange)="craqueVoteSelections.secondUserId = $event"
+                >
+                  @for (card of ratingCards; track card.playerId) {
+                    <mat-option
+                      [value]="card.playerId"
+                      [disabled]="isCraqueOptionDisabled(card.playerId, 'secondUserId')"
+                    >
+                      {{ card.name }}
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>3o lugar</mat-label>
+                <mat-select
+                  [value]="craqueVoteSelections.thirdUserId"
+                  (valueChange)="craqueVoteSelections.thirdUserId = $event"
+                >
+                  @for (card of ratingCards; track card.playerId) {
+                    <mat-option
+                      [value]="card.playerId"
+                      [disabled]="isCraqueOptionDisabled(card.playerId, 'thirdUserId')"
+                    >
+                      {{ card.name }}
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <button
+              mat-flat-button
+              color="accent"
+              (click)="submitCraqueVote()"
+              [disabled]="actionLoading || isConcluded"
+            >
+              Salvar podio de craque
+            </button>
+          } @else {
+            <p class="muted">A votacao de craque estara disponivel quando o ADM abrir as notas.</p>
+          }
+        </div>
+
+        <div class="panel craque-podium-box">
+          <h3>Podio dos Craques</h3>
+          <p class="muted">Total de votos de craque: {{ pelada.craquePodium.totalBallots }}</p>
+
+          @if (pelada.craquePodium.top3.length === 0) {
+            <p class="muted">Ainda nao ha votos suficientes para formar o podio.</p>
+          } @else {
+            <div class="podium-list">
+              @for (item of pelada.craquePodium.top3; track item.playerId) {
+                <div class="podium-row">
+                  <span class="podium-position">{{ item.position }}o</span>
+                  <div class="podium-content">
+                    <strong>{{ item.playerName }}</strong>
+                    <small class="muted">
+                      {{ item.points }} pts ({{ item.firstPlaces }}x 1o, {{ item.secondPlaces }}x 2o, {{ item.thirdPlaces }}x 3o)
+                    </small>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
       @if (ratingCards.length === 0) {
         <p class="muted">Ainda nao ha jogadores disponiveis para votacao neste racha.</p>
       }
@@ -249,16 +343,19 @@
     @if (authService.isAdmin) {
       <section class="panel">
         <h2 class="panel-title">Auditoria de notas (ADM)</h2>
+        <p class="muted">Clique no jogador para abrir a lista detalhada de quem votou e corrigir notas.</p>
 
         @if (voteGroups.length === 0) {
           <p class="muted">Nenhuma nota registrada neste racha ate agora.</p>
         }
 
         <div class="vote-audit-grid">
-          @for (group of voteGroups; track group.toUserId) {
-            <article class="panel vote-audit-group">
-              <h3>Notas recebidas por {{ group.toUserName }}</h3>
-
+          @for (group of voteGroups; track group.toUserId; let isFirst = $first) {
+            <details class="panel vote-audit-group" [attr.open]="isFirst ? '' : null">
+              <summary class="vote-audit-summary">
+                <h3>{{ group.toUserName }}</h3>
+                <span class="status-chip">{{ group.votes.length }} nota(s)</span>
+              </summary>
               <div class="vote-audit-list">
                 @for (vote of group.votes; track vote.voteId) {
                   <div class="vote-audit-row">
@@ -293,7 +390,7 @@
                   </div>
                 }
               </div>
-            </article>
+            </details>
           }
         </div>
       </section>

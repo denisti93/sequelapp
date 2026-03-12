@@ -1,9 +1,25 @@
+function normalizeUserId(userRef) {
+  if (!userRef) {
+    return null;
+  }
+
+  if (typeof userRef === 'object' && userRef._id) {
+    return String(userRef._id);
+  }
+
+  return String(userRef);
+}
+
 export function getParticipantIdSet(pelada) {
   const participants = new Set();
 
   for (const team of pelada.teams || []) {
-    for (const playerId of team.players || []) {
-      participants.add(String(playerId));
+    for (const playerRef of team.players || []) {
+      const normalized = normalizeUserId(playerRef);
+      if (!normalized || normalized === '[object Object]') {
+        continue;
+      }
+      participants.add(normalized);
     }
   }
 

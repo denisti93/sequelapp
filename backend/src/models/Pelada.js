@@ -24,6 +24,34 @@ const voteSchema = new mongoose.Schema(
   }
 );
 
+const craqueVoteSchema = new mongoose.Schema(
+  {
+    fromUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    firstUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    secondUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    thirdUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    }
+  },
+  {
+    timestamps: true
+  }
+);
+
 const playerStatSchema = new mongoose.Schema(
   {
     player: {
@@ -114,7 +142,8 @@ const peladaSchema = new mongoose.Schema(
       default: 'OPEN',
       required: true
     },
-    votes: [voteSchema]
+    votes: [voteSchema],
+    craqueVotes: [craqueVoteSchema]
   },
   {
     timestamps: true

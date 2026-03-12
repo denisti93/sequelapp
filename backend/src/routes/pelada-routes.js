@@ -4,6 +4,12 @@ import { User } from '../models/User.js';
 import { recalculateAllUsersStats } from '../services/stats-service.js';
 import { getParticipantIdSet, validateTeamsShape } from '../utils/pelada.js';
 
+const CRAQUE_WEIGHTS = {
+  firstUser: 5,
+  secondUser: 3,
+  thirdUser: 1
+};
+
 function formatPeladaSummary(pelada) {
   const date = new Date(pelada.date);
   return {
@@ -56,6 +62,66 @@ function ensureEditableRacha(pelada, reply) {
   return false;
 }
 
+function buildCraquePodium(craqueVotes = [], usersById = new Map()) {
+  const ranking = new Map();
+
+  function ensurePlayerEntry(playerId) {
+    if (!ranking.has(playerId)) {
+      ranking.set(playerId, {
+        playerId,
+        points: 0,
+        firstPlaces: 0,
+        secondPlaces: 0,
+        thirdPlaces: 0
+      });
+    }
+
+    return ranking.get(playerId);
+  }
+
+  for (const vote of craqueVotes) {
+    const firstId = String(vote.firstUser);
+    const secondId = String(vote.secondUser);
+    const thirdId = String(vote.thirdUser);
+
+    const first = ensurePlayerEntry(firstId);
+    const second = ensurePlayerEntry(secondId);
+    const third = ensurePlayerEntry(thirdId);
+
+    first.points += CRAQUE_WEIGHTS.firstUser;
+    first.firstPlaces += 1;
+
+    second.points += CRAQUE_WEIGHTS.secondUser;
+    second.secondPlaces += 1;
+
+    third.points += CRAQUE_WEIGHTS.thirdUser;
+    third.thirdPlaces += 1;
+  }
+
+  const top3 = Array.from(ranking.values())
+    .map((item) => ({
+      ...item,
+      playerName: usersById.get(item.playerId)?.name || 'Jogador removido'
+    }))
+    .sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.firstPlaces !== a.firstPlaces) return b.firstPlaces - a.firstPlaces;
+      if (b.secondPlaces !== a.secondPlaces) return b.secondPlaces - a.secondPlaces;
+      if (b.thirdPlaces !== a.thirdPlaces) return b.thirdPlaces - a.thirdPlaces;
+      return a.playerName.localeCompare(b.playerName);
+    })
+    .slice(0, 3)
+    .map((item, index) => ({
+      position: index + 1,
+      ...item
+    }));
+
+  return {
+    totalBallots: craqueVotes.length,
+    top3
+  };
+}
+
 export async function peladaRoutes(fastify) {
   fastify.get('/', { preHandler: [authenticate] }, async () => {
     const peladas = await Pelada.find({}, 'date status votingStatus teams')
@@ -87,6 +153,7 @@ export async function peladaRoutes(fastify) {
         teams: [],
         playerStats: [],
         votes: [],
+        craqueVotes: [],
         votingStatus: 'CLOSED',
         status: 'OPEN'
       });
@@ -104,6 +171,12 @@ export async function peladaRoutes(fastify) {
     if (!pelada) {
       return reply.code(404).send({ message: 'Pelada nao encontrada.' });
     }
+
+    const participants = getParticipantIdSet(pelada);
+    const participantIds = Array.from(participants);
+    const users = await User.find({ _id: { $in: participantIds } }, 'name').lean();
+    const usersById = new Map(users.map((user) => [String(user._id), user]));
+    const craquePodium = buildCraquePodium(pelada.craqueVotes || [], usersById);
 
     return {
       id: String(pelada._id),
@@ -132,7 +205,8 @@ export async function peladaRoutes(fastify) {
         goals: stat.goals || 0,
         assists: stat.assists || 0
       })),
-      votesCount: (pelada.votes || []).length
+      votesCount: (pelada.votes || []).length,
+      craquePodium
     };
   });
 
@@ -182,6 +256,7 @@ export async function peladaRoutes(fastify) {
       // Reconfigurar os times invalida votos e estatisticas da pelada.
       pelada.playerStats = [];
       pelada.votes = [];
+      pelada.craqueVotes = [];
       pelada.votingStatus = 'CLOSED';
 
       await pelada.save();
@@ -470,6 +545,74 @@ export async function peladaRoutes(fastify) {
     return reply.code(201).send({ message: 'Nota registrada com sucesso.' });
   });
 
+  fastify.post('/:id/craque-vote', { preHandler: [authenticate] }, async (request, reply) => {
+    const { firstUserId, secondUserId, thirdUserId } = request.body || {};
+    const fromUserId = String(request.user.id);
+
+    if (!firstUserId || !secondUserId || !thirdUserId) {
+      return reply.code(400).send({
+        message: 'Informe os 3 colocados do craque do racha.'
+      });
+    }
+
+    const picks = [String(firstUserId), String(secondUserId), String(thirdUserId)];
+    if (new Set(picks).size !== 3) {
+      return reply.code(400).send({
+        message: 'Os colocados de craque do racha devem ser jogadores diferentes.'
+      });
+    }
+
+    if (picks.includes(fromUserId)) {
+      return reply.code(400).send({
+        message: 'Nao e permitido colocar a si mesmo no podio de craque.'
+      });
+    }
+
+    const pelada = await Pelada.findById(request.params.id);
+    if (!pelada) {
+      return reply.code(404).send({ message: 'Pelada nao encontrada.' });
+    }
+    if (!ensureEditableRacha(pelada, reply)) {
+      return;
+    }
+
+    if (pelada.votingStatus !== 'OPEN') {
+      return reply.code(400).send({ message: 'A votacao desta pelada nao esta aberta.' });
+    }
+
+    const participants = getParticipantIdSet(pelada);
+    if (!participants.has(fromUserId)) {
+      return reply
+        .code(403)
+        .send({ message: 'Apenas jogadores participantes da pelada podem votar.' });
+    }
+
+    const hasInvalidPick = picks.some((pickId) => !participants.has(pickId));
+    if (hasInvalidPick) {
+      return reply.code(400).send({
+        message: 'Todos os jogadores do podio devem participar da pelada.'
+      });
+    }
+
+    const existingVote = pelada.craqueVotes.find((vote) => String(vote.fromUser) === fromUserId);
+    if (existingVote) {
+      existingVote.firstUser = String(firstUserId);
+      existingVote.secondUser = String(secondUserId);
+      existingVote.thirdUser = String(thirdUserId);
+    } else {
+      pelada.craqueVotes.push({
+        fromUser: fromUserId,
+        firstUser: String(firstUserId),
+        secondUser: String(secondUserId),
+        thirdUser: String(thirdUserId)
+      });
+    }
+
+    await pelada.save();
+
+    return reply.code(201).send({ message: 'Podio de craque registrado com sucesso.' });
+  });
+
   fastify.get(
     '/:id/votes/details',
     {
@@ -576,10 +719,15 @@ export async function peladaRoutes(fastify) {
         .map((vote) => String(vote.toUser))
     );
 
+    const myCraqueVote = (pelada.craqueVotes || []).find(
+      (vote) => String(vote.fromUser) === String(request.user.id)
+    );
+
     const canCurrentUserVote =
       !isConcluded(pelada) &&
       pelada.votingStatus === 'OPEN' &&
       participants.has(String(request.user.id));
+    const canCurrentUserVoteCraque = canCurrentUserVote;
 
     const cards = participantIds
       .map((participantId) => {
@@ -618,6 +766,14 @@ export async function peladaRoutes(fastify) {
       status: pelada.status || 'OPEN',
       votingStatus: pelada.votingStatus,
       canCurrentUserVote,
+      canCurrentUserVoteCraque,
+      myCraqueVote: myCraqueVote
+        ? {
+            firstUserId: String(myCraqueVote.firstUser),
+            secondUserId: String(myCraqueVote.secondUser),
+            thirdUserId: String(myCraqueVote.thirdUser)
+          }
+        : null,
       cards
     };
   });

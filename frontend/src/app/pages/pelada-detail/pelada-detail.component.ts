@@ -22,7 +22,13 @@ import { forkJoin, of } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { PeladaService } from '../../core/services/pelada.service';
 import { UserService } from '../../core/services/user.service';
-import { PeladaDetail, RatingCard, RatingCardsResponse, VoteDetail } from '../../models/pelada';
+import {
+  CraqueVoteSelection,
+  PeladaDetail,
+  RatingCard,
+  RatingCardsResponse,
+  VoteDetail
+} from '../../models/pelada';
 import { User } from '../../models/user';
 
 function exactLengthValidator(length: number) {
@@ -66,7 +72,9 @@ export class PeladaDetailComponent implements OnInit {
 
   ratingCards: RatingCard[] = [];
   canCurrentUserVote = false;
+  canCurrentUserVoteCraque = false;
   voteSelections: Record<string, number> = {};
+  craqueVoteSelections: CraqueVoteSelection = this.emptyCraqueVoteSelections();
   voteGroups: Array<{ toUserId: string; toUserName: string; votes: VoteDetail[] }> = [];
   adminVoteSelections: Record<string, number> = {};
 
@@ -283,7 +291,11 @@ export class PeladaDetailComponent implements OnInit {
   private applyRatingCards(rating: RatingCardsResponse): void {
     this.ratingCards = rating.cards;
     this.canCurrentUserVote = rating.canCurrentUserVote;
+    this.canCurrentUserVoteCraque = rating.canCurrentUserVoteCraque;
     this.voteSelections = {};
+    this.craqueVoteSelections = rating.myCraqueVote
+      ? { ...rating.myCraqueVote }
+      : this.emptyCraqueVoteSelections();
   }
 
   private applyVoteDetails(votes: VoteDetail[]): void {
@@ -336,6 +348,30 @@ export class PeladaDetailComponent implements OnInit {
       duration: 2800
     });
     return false;
+  }
+
+  private emptyCraqueVoteSelections(): CraqueVoteSelection {
+    return {
+      firstUserId: '',
+      secondUserId: '',
+      thirdUserId: ''
+    };
+  }
+
+  isCraqueOptionDisabled(
+    playerId: string,
+    slot: keyof CraqueVoteSelection
+  ): boolean {
+    const currentSlotValue = this.craqueVoteSelections[slot];
+    if (currentSlotValue === playerId) {
+      return false;
+    }
+
+    return (
+      this.craqueVoteSelections.firstUserId === playerId ||
+      this.craqueVoteSelections.secondUserId === playerId ||
+      this.craqueVoteSelections.thirdUserId === playerId
+    );
   }
 
   saveTeams(): void {
@@ -526,6 +562,62 @@ export class PeladaDetailComponent implements OnInit {
         });
       }
     });
+  }
+
+  submitCraqueVote(): void {
+    if (!this.ensureNotConcluded()) {
+      return;
+    }
+
+    if (!this.canCurrentUserVoteCraque || this.actionLoading) {
+      return;
+    }
+
+    const { firstUserId, secondUserId, thirdUserId } = this.craqueVoteSelections;
+    if (!firstUserId || !secondUserId || !thirdUserId) {
+      this.snackBar.open('Selecione 1o, 2o e 3o lugar do craque do racha.', 'Fechar', {
+        duration: 2400
+      });
+      return;
+    }
+
+    if (new Set([firstUserId, secondUserId, thirdUserId]).size !== 3) {
+      this.snackBar.open('Os tres colocados devem ser jogadores diferentes.', 'Fechar', {
+        duration: 2400
+      });
+      return;
+    }
+
+    if (
+      this.authService.currentUser &&
+      [firstUserId, secondUserId, thirdUserId].includes(this.authService.currentUser.id)
+    ) {
+      this.snackBar.open('Nao e permitido colocar a si mesmo no podio de craque.', 'Fechar', {
+        duration: 2400
+      });
+      return;
+    }
+
+    this.actionLoading = true;
+    this.peladaService
+      .submitCraqueVote(this.peladaId, {
+        firstUserId,
+        secondUserId,
+        thirdUserId
+      })
+      .subscribe({
+        next: () => {
+          this.snackBar.open('Podio de craque registrado.', 'Fechar', { duration: 2200 });
+          this.actionLoading = false;
+          this.loadData();
+        },
+        error: (error) => {
+          this.actionLoading = false;
+          this.snackBar.open(error?.error?.message || 'Falha ao registrar podio de craque.', 'Fechar', {
+            duration: 3200
+          });
+        }
+      });
   }
 
   concludeRacha(): void {

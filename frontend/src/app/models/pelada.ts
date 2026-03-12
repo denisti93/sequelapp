@@ -35,6 +35,21 @@ export interface PeladaPlayerStat {
   assists: number;
 }
 
+export interface CraquePodiumItem {
+  position: number;
+  playerId: string;
+  playerName: string;
+  points: number;
+  firstPlaces: number;
+  secondPlaces: number;
+  thirdPlaces: number;
+}
+
+export interface CraquePodium {
+  totalBallots: number;
+  top3: CraquePodiumItem[];
+}
+
 export interface PeladaDetail {
   id: string;
   date: string;
@@ -44,6 +59,13 @@ export interface PeladaDetail {
   teams: PeladaTeam[];
   playerStats: PeladaPlayerStat[];
   votesCount: number;
+  craquePodium: CraquePodium;
+}
+
+export interface CraqueVoteSelection {
+  firstUserId: string;
+  secondUserId: string;
+  thirdUserId: string;
 }
 
 export interface RatingCard {
@@ -65,6 +87,8 @@ export interface RatingCardsResponse {
   status: RachaStatus;
   votingStatus: VotingStatus;
   canCurrentUserVote: boolean;
+  canCurrentUserVoteCraque: boolean;
+  myCraqueVote: CraqueVoteSelection | null;
   cards: RatingCard[];
 }
 
