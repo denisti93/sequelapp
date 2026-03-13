@@ -12,6 +12,7 @@ import { MatTableModule } from '@angular/material/table';
 import { AuthService } from '../../core/services/auth.service';
 import { UserService } from '../../core/services/user.service';
 import { User } from '../../models/user';
+import { PlayerNamePipe } from '../../shared/pipes/player-name.pipe';
 
 type PodiumMetric = 'goals' | 'assists' | 'titles';
 
@@ -45,7 +46,8 @@ interface PodiumCategory {
     MatInputModule,
     MatSelectModule,
     MatSnackBarModule,
-    MatProgressBarModule
+    MatProgressBarModule,
+    PlayerNamePipe
   ],
   templateUrl: './ranking.component.html',
   styleUrls: ['./ranking.component.scss']

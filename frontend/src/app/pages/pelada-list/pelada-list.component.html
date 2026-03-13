@@ -17,7 +17,7 @@
         <div class="summary-layout">
           <div class="summary-main">
             <div class="summary-player-row">
-              <h3 class="summary-player-name">{{ mySummary.name }}</h3>
+              <h3 class="summary-player-name">{{ mySummary.name | playerName }}</h3>
               <span class="status-chip position-chip">Posição: {{ playerPositionLabel(mySummary.position) }}</span>
             </div>
 
@@ -172,7 +172,7 @@
               @for (user of pendingUsers; track user.id) {
                 <div class="pending-user-inline-item">
                   <div>
-                    <strong>{{ user.name }}</strong>
+                    <strong>{{ user.name | playerName }}</strong>
                     <p class="muted">&#64;{{ user.username }}</p>
                   </div>
                   <button

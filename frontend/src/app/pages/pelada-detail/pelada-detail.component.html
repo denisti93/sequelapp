@@ -263,7 +263,7 @@
                   <mat-select formControlName="players" multiple (selectionChange)="onTeamPlayersChanged(i)">
                     @for (user of users; track user.id) {
                       <mat-option [value]="user.id" [disabled]="isPlayerUnavailableForTeam(user.id, i)">
-                        {{ user.name }}
+                        {{ user.name | playerName }}
                       </mat-option>
                     }
                   </mat-select>
@@ -355,25 +355,25 @@
         <section class="panel">
           <h2 class="panel-title">Resultados por time</h2>
 
-          <form [formGroup]="resultsForm" (ngSubmit)="saveResults()" class="results-grid">
+          <form [formGroup]="resultsForm" (ngSubmit)="saveResults()" class="results-form">
             <div formArrayName="results" class="results-grid">
               @for (resultCtrl of resultsArray.controls; track resultCtrl; let i = $index) {
                 <div [formGroupName]="i" class="panel result-card">
                   <h3>{{ resultCtrl.get('teamName')?.value }}</h3>
 
-                  <div class="form-grid">
-                    <mat-form-field appearance="outline" class="small-number-field">
-                      <mat-label>Vitórias</mat-label>
+                  <div class="number-input-grid result-number-grid">
+                    <mat-form-field appearance="outline" class="digit-field result-digit-field">
+                      <mat-label>Vit.</mat-label>
                       <input matInput type="number" min="0" formControlName="wins" />
                     </mat-form-field>
 
-                    <mat-form-field appearance="outline" class="small-number-field">
-                      <mat-label>Empates</mat-label>
+                    <mat-form-field appearance="outline" class="digit-field result-digit-field">
+                      <mat-label>Emp.</mat-label>
                       <input matInput type="number" min="0" formControlName="draws" />
                     </mat-form-field>
 
-                    <mat-form-field appearance="outline" class="small-number-field">
-                      <mat-label>Derrotas</mat-label>
+                    <mat-form-field appearance="outline" class="digit-field result-digit-field">
+                      <mat-label>Der.</mat-label>
                       <input matInput type="number" min="0" formControlName="losses" />
                     </mat-form-field>
                   </div>
@@ -438,16 +438,16 @@
 
             @for (statIndex of filteredStatsIndexes; track statIndex) {
               <div [formGroupName]="statIndex" class="panel stat-row">
-                <h3>{{ statsArray.at(statIndex).get('playerName')?.value }}</h3>
+                <h3>{{ statsArray.at(statIndex).get('playerName')?.value | playerName }}</h3>
 
-                <div class="form-grid">
-                  <mat-form-field appearance="outline" class="small-number-field">
+                <div class="number-input-grid stats-number-grid">
+                  <mat-form-field appearance="outline" class="digit-field stats-digit-field">
                     <mat-label>Gols</mat-label>
                     <input matInput type="number" min="0" formControlName="goals" />
                   </mat-form-field>
 
-                  <mat-form-field appearance="outline" class="small-number-field">
-                    <mat-label>Assistências</mat-label>
+                  <mat-form-field appearance="outline" class="digit-field stats-digit-field">
+                    <mat-label>Assist.</mat-label>
                     <input matInput type="number" min="0" formControlName="assists" />
                   </mat-form-field>
                 </div>
@@ -522,7 +522,7 @@
                         [value]="card.playerId"
                         [disabled]="isCraqueOptionDisabled(card.playerId, 'firstUserId')"
                       >
-                        {{ card.name }}
+                        {{ card.name | playerName }}
                       </mat-option>
                     }
                   </mat-select>
@@ -539,7 +539,7 @@
                         [value]="card.playerId"
                         [disabled]="isCraqueOptionDisabled(card.playerId, 'secondUserId')"
                       >
-                        {{ card.name }}
+                        {{ card.name | playerName }}
                       </mat-option>
                     }
                   </mat-select>
@@ -556,7 +556,7 @@
                         [value]="card.playerId"
                         [disabled]="isCraqueOptionDisabled(card.playerId, 'thirdUserId')"
                       >
-                        {{ card.name }}
+                        {{ card.name | playerName }}
                       </mat-option>
                     }
                   </mat-select>
@@ -589,7 +589,7 @@
                 <div class="podium-row">
                   <span class="podium-position">{{ item.position }}º</span>
                   <div class="podium-content">
-                    <strong>{{ item.playerName }}</strong>
+                    <strong>{{ item.playerName | playerName }}</strong>
                     <small class="muted">
                       {{ item.points }} pts ({{ item.firstPlaces }}x 1º, {{ item.secondPlaces }}x 2º, {{ item.thirdPlaces }}x 3º)
                     </small>
@@ -630,7 +630,7 @@
                 [class.swipe-left]="ratingFlowAnimating && ratingFlowSwipeDirection === 'left'"
               >
                 <mat-card-header>
-                  <mat-card-title>{{ flowCard.name }}</mat-card-title>
+                  <mat-card-title>{{ flowCard.name | playerName }}</mat-card-title>
                   <mat-card-subtitle>&#64;{{ flowCard.username }}</mat-card-subtitle>
                 </mat-card-header>
 
@@ -686,7 +686,7 @@
               @if (ratedPlayersByMe.length > 0) {
                 <div class="rated-pill-list">
                   @for (rated of ratedPlayersByMe; track rated.playerId) {
-                    <span class="status-chip success">{{ rated.name }}</span>
+                    <span class="status-chip success">{{ rated.name | playerName }}</span>
                   }
                 </div>
               }
@@ -698,7 +698,7 @@
           @for (card of ratingCards; track card.playerId) {
             <mat-card class="rating-card">
               <mat-card-header>
-                <mat-card-title>{{ card.name }}</mat-card-title>
+                <mat-card-title>{{ card.name | playerName }}</mat-card-title>
                 <mat-card-subtitle>&#64;{{ card.username }}</mat-card-subtitle>
               </mat-card-header>
 
@@ -760,15 +760,15 @@
           @for (group of voteGroups; track group.toUserId; let isFirst = $first) {
             <details class="panel vote-audit-group" [attr.open]="isFirst ? '' : null">
               <summary class="vote-audit-summary">
-                <h3>{{ group.toUserName }}</h3>
+                <h3>{{ group.toUserName | playerName }}</h3>
                 <span class="status-chip">{{ group.votes.length }} nota(s)</span>
               </summary>
               <div class="vote-audit-list">
                 @for (vote of group.votes; track vote.voteId) {
                   <div class="vote-audit-row">
                     <div>
-                      <strong>{{ vote.fromUserName }}</strong>
-                      <p class="muted">avaliou {{ group.toUserName }}</p>
+                      <strong>{{ vote.fromUserName | playerName }}</strong>
+                      <p class="muted">avaliou {{ group.toUserName | playerName }}</p>
                     </div>
 
                     <div class="vote-edit-actions">

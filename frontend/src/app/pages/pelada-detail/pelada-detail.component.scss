@@ -453,7 +453,17 @@
   margin-top: 6px;
 }
 
-.results-grid,
+.results-form {
+  display: grid;
+  gap: 10px;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -473,8 +483,39 @@
   width: min(420px, 100%);
 }
 
-.small-number-field {
-  max-width: 130px;
+.number-input-grid {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.digit-field {
+  width: 74px;
+}
+
+.digit-field .mat-mdc-form-field-infix {
+  min-height: 40px;
+}
+
+.digit-field input {
+  text-align: center;
+}
+
+.result-number-grid {
+  justify-content: center;
+}
+
+.result-digit-field {
+  width: 72px;
+}
+
+.stats-number-grid {
+  justify-content: flex-start;
+}
+
+.stats-digit-field {
+  width: 76px;
 }
 
 .result-card,
@@ -799,6 +840,10 @@ h3 {
   .rating-grid,
   .vote-audit-grid {
     grid-template-columns: 1fr;
+  }
+
+  .number-input-grid {
+    justify-content: flex-start;
   }
 
   .guest-row {

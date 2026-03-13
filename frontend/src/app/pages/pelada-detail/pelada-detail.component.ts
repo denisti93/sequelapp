@@ -22,6 +22,8 @@ import { forkJoin, of } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { PeladaService } from '../../core/services/pelada.service';
 import { UserService } from '../../core/services/user.service';
+import { PlayerNamePipe } from '../../shared/pipes/player-name.pipe';
+import { toPlayerDisplayName } from '../../shared/utils/player-name';
 import {
   CraqueVoteSelection,
   PeladaDetail,
@@ -74,7 +76,8 @@ function maxLengthArrayValidator(length: number) {
     MatSnackBarModule,
     MatIconModule,
     MatProgressBarModule,
-    MatChipsModule
+    MatChipsModule,
+    PlayerNamePipe
   ],
   templateUrl: './pelada-detail.component.html',
   styleUrls: ['./pelada-detail.component.scss']
@@ -176,7 +179,8 @@ export class PeladaDetailComponent implements OnInit {
   }
 
   get nextRatingFlowCardName(): string | null {
-    return this.ratingFlowQueue[1]?.name || null;
+    const nextName = this.ratingFlowQueue[1]?.name;
+    return nextName ? toPlayerDisplayName(nextName) : null;
   }
 
   get ratingFlowPendingCount(): number {
@@ -386,7 +390,7 @@ export class PeladaDetailComponent implements OnInit {
     const usersById = new Map(this.users.map((user) => [user.id, user]));
 
     return selectedIds
-      .map((userId) => usersById.get(userId)?.name)
+      .map((userId) => toPlayerDisplayName(usersById.get(userId)?.name))
       .filter((name): name is string => Boolean(name))
       .sort((a, b) => a.localeCompare(b));
   }
@@ -929,7 +933,9 @@ export class PeladaDetailComponent implements OnInit {
     this.actionLoading = true;
     this.peladaService.vote(this.peladaId, currentCard.playerId, score).subscribe({
       next: () => {
-        this.snackBar.open(`Nota registrada para ${currentCard.name}.`, 'Fechar', { duration: 1800 });
+        this.snackBar.open(`Nota registrada para ${toPlayerDisplayName(currentCard.name)}.`, 'Fechar', {
+          duration: 1800
+        });
         this.animateRatingFlow('right', () => {
           this.applySuccessfulVote(currentCard.playerId);
           this.ratingFlowSelectedScore = null;
@@ -1188,12 +1194,7 @@ export class PeladaDetailComponent implements OnInit {
   }
 
   playerShortName(name: string): string {
-    const parts = String(name || '')
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
-
-    return parts[0] || name;
+    return toPlayerDisplayName(name);
   }
 
   formatMatchScore(homeGoals: number | null, awayGoals: number | null): string {
@@ -1206,7 +1207,7 @@ export class PeladaDetailComponent implements OnInit {
 
   formatGuestPlayers(guestPlayers: PeladaGuestPlayer[]): string {
     return (guestPlayers || [])
-      .map((guest) => `${guest.name} (${this.positionLabel(guest.position)})`)
+      .map((guest) => `${toPlayerDisplayName(guest.name)} (${this.positionLabel(guest.position)})`)
       .join(', ');
   }
 

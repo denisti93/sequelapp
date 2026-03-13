@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { AuthService } from './core/services/auth.service';
+import { PlayerNamePipe } from './shared/pipes/player-name.pipe';
 
 @Component({
   selector: 'app-root',
@@ -18,7 +19,8 @@ import { AuthService } from './core/services/auth.service';
     MatToolbarModule,
     MatButtonModule,
     MatIconModule,
-    MatMenuModule
+    MatMenuModule,
+    PlayerNamePipe
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']

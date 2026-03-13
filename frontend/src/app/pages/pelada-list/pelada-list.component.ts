@@ -16,6 +16,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { PeladaService } from '../../core/services/pelada.service';
 import { UserService } from '../../core/services/user.service';
 import { PendingApprovalUser, PlayerPosition, User } from '../../models/user';
+import { PlayerNamePipe } from '../../shared/pipes/player-name.pipe';
 
 @Component({
   selector: 'app-pelada-list',
@@ -32,7 +33,8 @@ import { PendingApprovalUser, PlayerPosition, User } from '../../models/user';
     MatIconModule,
     MatTableModule,
     MatSnackBarModule,
-    MatProgressBarModule
+    MatProgressBarModule,
+    PlayerNamePipe
   ],
   templateUrl: './pelada-list.component.html',
   styleUrls: ['./pelada-list.component.scss']

@@ -26,7 +26,7 @@
             <mat-label>Jogador</mat-label>
             <mat-select formControlName="userId">
               @for (user of users; track user.id) {
-                <mat-option [value]="user.id">{{ user.name }} ({{ user.username }})</mat-option>
+                <mat-option [value]="user.id">{{ user.name | playerName }} ({{ user.username }})</mat-option>
               }
             </mat-select>
           </mat-form-field>
@@ -81,7 +81,7 @@
                 >
                   @if (slot) {
                     <div class="podium-player-chip">
-                      <strong class="podium-player-name">{{ slot.userName }}</strong>
+                      <strong class="podium-player-name">{{ slot.userName | playerName }}</strong>
                       <span class="podium-player-score">{{ slot.value }} {{ category.unit }}</span>
                     </div>
                     <div class="podium-pedestal">
@@ -135,7 +135,7 @@
         <ng-container matColumnDef="name">
           <th mat-header-cell *matHeaderCellDef>Jogador</th>
           <td mat-cell *matCellDef="let user">
-            <div>{{ user.name }}</div>
+            <div>{{ user.name | playerName }}</div>
             <small class="muted">&#64;{{ user.username }}</small>
           </td>
         </ng-container>
@@ -184,7 +184,7 @@
       @for (user of filteredUsers; track user.id) {
         <article class="mobile-ranking-card">
           <div class="mobile-ranking-header">
-            <h3>{{ user.name }}</h3>
+            <h3>{{ user.name | playerName }}</h3>
             <span class="status-chip">Nota {{ user.ratingAverage | number : '1.1-2' }}</span>
           </div>
           <small class="muted">&#64;{{ user.username }}</small>

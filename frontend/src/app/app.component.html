@@ -19,7 +19,7 @@
     </nav>
 
     <span class="user-pill desktop-only">
-      {{ authService.currentUser?.name }} ({{ authService.currentUser?.role }})
+      {{ authService.currentUser?.name | playerName }} ({{ authService.currentUser?.role }})
     </span>
 
     <button mat-stroked-button color="accent" class="desktop-only" (click)="logout()">
@@ -47,7 +47,7 @@
       </button>
       <button mat-menu-item disabled class="mobile-user-item">
         <mat-icon>person</mat-icon>
-        <span>{{ authService.currentUser?.name }} ({{ authService.currentUser?.role }})</span>
+        <span>{{ authService.currentUser?.name | playerName }} ({{ authService.currentUser?.role }})</span>
       </button>
       <button mat-menu-item (click)="logout()">
         <mat-icon>logout</mat-icon>
