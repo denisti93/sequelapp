@@ -102,29 +102,93 @@
   }
 
   @if (authService.isAdmin) {
-    <section class="panel">
-      <h2 class="panel-title">Criar novo racha</h2>
-      <form [formGroup]="createForm" class="form-grid" (ngSubmit)="createPelada()">
-        <mat-form-field appearance="outline">
-          <mat-label>Data do racha</mat-label>
-          <input matInput type="date" formControlName="date" />
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Tipo</mat-label>
-          <mat-select formControlName="type">
-            <mat-option value="NORMAL">Racha comum</mat-option>
-            <mat-option value="TOURNAMENT">Torneio</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <div class="form-actions">
-          <button mat-flat-button color="primary" type="submit" [disabled]="loading">
-            <mat-icon>add_circle</mat-icon>
-            Criar racha
-          </button>
+    <section class="panel admin-racha-panel">
+      <div class="admin-racha-header">
+        <div>
+          <h2 class="panel-title">Painel de rachas</h2>
+          <p class="muted">Acompanhe status, crie rachas e aprove novos jogadores em um único fluxo.</p>
         </div>
-      </form>
+      </div>
+
+      <div class="admin-overview-grid">
+        <article class="admin-overview-card">
+          <span class="metric-label">Total de rachas</span>
+          <strong>{{ totalRachasCount() }}</strong>
+        </article>
+        <article class="admin-overview-card">
+          <span class="metric-label">Em aberto</span>
+          <strong>{{ openRachasCount() }}</strong>
+        </article>
+        <article class="admin-overview-card">
+          <span class="metric-label">Concluídos</span>
+          <strong>{{ concludedRachasCount() }}</strong>
+        </article>
+        <article class="admin-overview-card">
+          <span class="metric-label">Torneios</span>
+          <strong>{{ tournamentRachasCount() }}</strong>
+        </article>
+        <article class="admin-overview-card highlight">
+          <span class="metric-label">Aprovações pendentes</span>
+          <strong>{{ pendingUsers.length }}</strong>
+        </article>
+      </div>
+
+      <div class="admin-tools-grid">
+        <article class="admin-tool-card">
+          <h3>Criar novo racha</h3>
+          <form [formGroup]="createForm" class="form-grid" (ngSubmit)="createPelada()">
+            <mat-form-field appearance="outline">
+              <mat-label>Data do racha</mat-label>
+              <input matInput type="date" formControlName="date" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo</mat-label>
+              <mat-select formControlName="type">
+                <mat-option value="NORMAL">Racha comum</mat-option>
+                <mat-option value="TOURNAMENT">Torneio</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <div class="form-actions">
+              <button mat-flat-button color="primary" type="submit" [disabled]="loading">
+                <mat-icon>add_circle</mat-icon>
+                Criar racha
+              </button>
+            </div>
+          </form>
+        </article>
+
+        <article class="admin-tool-card">
+          <div class="admin-approvals-header">
+            <h3>Aprovação de novos jogadores</h3>
+            <span class="status-chip">{{ pendingUsers.length }} pendente(s)</span>
+          </div>
+
+          @if (pendingUsers.length === 0) {
+            <p class="muted">Não há jogadores pendentes de aprovação.</p>
+          } @else {
+            <div class="pending-users-inline-list">
+              @for (user of pendingUsers; track user.id) {
+                <div class="pending-user-inline-item">
+                  <div>
+                    <strong>{{ user.name }}</strong>
+                    <p class="muted">&#64;{{ user.username }}</p>
+                  </div>
+                  <button
+                    mat-stroked-button
+                    color="primary"
+                    (click)="approveUser(user.id)"
+                    [disabled]="approvingUserId === user.id"
+                  >
+                    Aprovar
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </article>
+      </div>
     </section>
   }
 

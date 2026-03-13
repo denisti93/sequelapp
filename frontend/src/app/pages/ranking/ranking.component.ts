@@ -3,6 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
@@ -10,7 +11,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { AuthService } from '../../core/services/auth.service';
 import { UserService } from '../../core/services/user.service';
-import { PendingApprovalUser, User } from '../../models/user';
+import { User } from '../../models/user';
 
 @Component({
   selector: 'app-ranking',
@@ -21,6 +22,7 @@ import { PendingApprovalUser, User } from '../../models/user';
     MatTableModule,
     MatButtonModule,
     MatFormFieldModule,
+    MatIconModule,
     MatInputModule,
     MatSelectModule,
     MatSnackBarModule,
@@ -32,8 +34,7 @@ import { PendingApprovalUser, User } from '../../models/user';
 export class RankingComponent implements OnInit {
   loading = false;
   users: User[] = [];
-  pendingUsers: PendingApprovalUser[] = [];
-  approvingUserId: string | null = null;
+  searchTerm = '';
   readonly displayedColumns = [
     'name',
     'totalGoals',
@@ -58,9 +59,6 @@ export class RankingComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadUsers();
-    if (this.authService.isAdmin) {
-      this.loadPendingUsers();
-    }
   }
 
   loadUsers(): void {
@@ -73,47 +71,6 @@ export class RankingComponent implements OnInit {
       error: (error) => {
         this.loading = false;
         this.snackBar.open(error?.error?.message || 'Falha ao carregar ranking.', 'Fechar', {
-          duration: 3000
-        });
-      }
-    });
-  }
-
-  loadPendingUsers(): void {
-    if (!this.authService.isAdmin) {
-      return;
-    }
-
-    this.userService.getPendingUsers().subscribe({
-      next: (users) => {
-        this.pendingUsers = users;
-      },
-      error: (error) => {
-        this.snackBar.open(error?.error?.message || 'Falha ao carregar aprovações pendentes.', 'Fechar', {
-          duration: 3000
-        });
-      }
-    });
-  }
-
-  approveUser(userId: string): void {
-    if (!this.authService.isAdmin || this.approvingUserId) {
-      return;
-    }
-
-    this.approvingUserId = userId;
-    this.userService.approveUser(userId).subscribe({
-      next: (response) => {
-        this.snackBar.open(response?.message || 'Jogador aprovado com sucesso.', 'Fechar', {
-          duration: 2500
-        });
-        this.approvingUserId = null;
-        this.loadPendingUsers();
-        this.loadUsers();
-      },
-      error: (error) => {
-        this.approvingUserId = null;
-        this.snackBar.open(error?.error?.message || 'Falha ao aprovar jogador.', 'Fechar', {
           duration: 3000
         });
       }
@@ -144,5 +101,44 @@ export class RankingComponent implements OnInit {
         });
       }
     });
+  }
+
+  onSearchChange(event: Event): void {
+    const target = event.target as HTMLInputElement | null;
+    this.searchTerm = target?.value || '';
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
+  }
+
+  get filteredUsers(): User[] {
+    const query = this.normalize(this.searchTerm);
+    if (!query) {
+      return this.users;
+    }
+
+    return this.users.filter((user) => {
+      const name = this.normalize(user.name);
+      const username = this.normalize(user.username);
+      return name.includes(query) || username.includes(query);
+    });
+  }
+
+  averageRating(): number {
+    if (this.users.length === 0) {
+      return 0;
+    }
+
+    const total = this.users.reduce((sum, user) => sum + Number(user.ratingAverage || 0), 0);
+    return Number((total / this.users.length).toFixed(2));
+  }
+
+  private normalize(value: string): string {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
   }
 }

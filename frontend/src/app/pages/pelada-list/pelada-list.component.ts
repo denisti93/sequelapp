@@ -15,7 +15,7 @@ import { PeladaSummary } from '../../models/pelada';
 import { AuthService } from '../../core/services/auth.service';
 import { PeladaService } from '../../core/services/pelada.service';
 import { UserService } from '../../core/services/user.service';
-import { PlayerPosition, User } from '../../models/user';
+import { PendingApprovalUser, PlayerPosition, User } from '../../models/user';
 
 @Component({
   selector: 'app-pelada-list',
@@ -42,6 +42,8 @@ export class PeladaListComponent implements OnInit {
   summaryLoading = false;
   positionLoading = false;
   peladas: PeladaSummary[] = [];
+  pendingUsers: PendingApprovalUser[] = [];
+  approvingUserId: string | null = null;
   readonly displayedColumns = ['date', 'type', 'status', 'votingStatus', 'actions'];
   mySummary: User | null = null;
   readonly playerPositionOptions: Array<{ value: PlayerPosition; label: string }> = [
@@ -69,7 +71,9 @@ export class PeladaListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadPeladas();
-    if (!this.authService.isAdmin) {
+    if (this.authService.isAdmin) {
+      this.loadPendingUsers();
+    } else {
       this.loadMySummary();
     }
   }
@@ -146,6 +150,46 @@ export class PeladaListComponent implements OnInit {
     });
   }
 
+  loadPendingUsers(): void {
+    if (!this.authService.isAdmin) {
+      return;
+    }
+
+    this.userService.getPendingUsers().subscribe({
+      next: (users) => {
+        this.pendingUsers = users;
+      },
+      error: (error) => {
+        this.snackBar.open(error?.error?.message || 'Falha ao carregar aprovações pendentes.', 'Fechar', {
+          duration: 3000
+        });
+      }
+    });
+  }
+
+  approveUser(userId: string): void {
+    if (!this.authService.isAdmin || this.approvingUserId) {
+      return;
+    }
+
+    this.approvingUserId = userId;
+    this.userService.approveUser(userId).subscribe({
+      next: (response) => {
+        this.approvingUserId = null;
+        this.snackBar.open(response?.message || 'Jogador aprovado com sucesso.', 'Fechar', {
+          duration: 2500
+        });
+        this.loadPendingUsers();
+      },
+      error: (error) => {
+        this.approvingUserId = null;
+        this.snackBar.open(error?.error?.message || 'Falha ao aprovar jogador.', 'Fechar', {
+          duration: 3000
+        });
+      }
+    });
+  }
+
   saveMyPosition(): void {
     if (this.positionForm.invalid || this.positionLoading || this.summaryLoading || this.authService.isAdmin) {
       this.positionForm.markAllAsTouched();
@@ -207,6 +251,22 @@ export class PeladaListComponent implements OnInit {
       Number(summary.totalCraqueSecondPlaces || 0) +
       Number(summary.totalCraqueThirdPlaces || 0)
     );
+  }
+
+  totalRachasCount(): number {
+    return this.peladas.length;
+  }
+
+  openRachasCount(): number {
+    return this.peladas.filter((racha) => racha.status === 'OPEN').length;
+  }
+
+  concludedRachasCount(): number {
+    return this.peladas.filter((racha) => racha.status === 'CONCLUDED').length;
+  }
+
+  tournamentRachasCount(): number {
+    return this.peladas.filter((racha) => racha.type === 'TOURNAMENT').length;
   }
 
   votingStatusLabel(votingStatus: PeladaSummary['votingStatus']): string {

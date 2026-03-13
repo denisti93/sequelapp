@@ -3,25 +3,65 @@
   min-width: 840px;
 }
 
-.pending-users-grid {
+.admin-ranking-panel {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.admin-ranking-header p {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+}
+
+.admin-ranking-overview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
-.pending-user-card {
+.admin-overview-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: linear-gradient(160deg, #fef8ff, #fff2e9);
+  display: grid;
+  gap: 4px;
+}
+
+.admin-overview-card strong {
+  font-size: 1.2rem;
+  color: #5b21b6;
+}
+
+.admin-rating-tool {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px;
   background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
 }
 
-.pending-user-card p {
-  margin: 2px 0 0;
+.admin-rating-tool h3 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.ranking-panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ranking-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.ranking-search-field {
+  width: min(380px, 100%);
 }
 
 .mobile-ranking-list {
@@ -57,13 +97,12 @@
 }
 
 @media (max-width: 760px) {
-  .pending-users-grid {
+  .admin-ranking-overview {
     grid-template-columns: 1fr;
   }
 
-  .pending-user-card {
-    flex-direction: column;
-    align-items: stretch;
+  .ranking-search-field {
+    width: 100%;
   }
 
   .desktop-table {

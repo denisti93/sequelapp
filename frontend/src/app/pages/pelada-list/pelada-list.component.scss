@@ -8,6 +8,93 @@
   gap: 14px;
 }
 
+.admin-racha-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-racha-header p {
+  margin: 4px 0 0;
+  font-size: 0.86rem;
+}
+
+.admin-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-overview-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: linear-gradient(160deg, #fef8ff, #fff2e8);
+  display: grid;
+  gap: 4px;
+}
+
+.admin-overview-card strong {
+  font-size: 1.24rem;
+  color: #5b21b6;
+}
+
+.admin-overview-card.highlight {
+  border-color: #f97316;
+  background: linear-gradient(150deg, #ffe7d5, #f4e6ff);
+}
+
+.admin-overview-card.highlight strong {
+  color: #c2410c;
+}
+
+.admin-tools-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.admin-tool-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+  display: grid;
+  gap: 10px;
+}
+
+.admin-tool-card h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.admin-approvals-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pending-users-inline-list {
+  display: grid;
+  gap: 8px;
+}
+
+.pending-user-inline-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  background: #fffcff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.pending-user-inline-item p {
+  margin: 2px 0 0;
+}
+
 .summary-panel-header {
   display: flex;
   justify-content: space-between;
@@ -250,6 +337,14 @@
 }
 
 @media (max-width: 960px) {
+  .admin-overview-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .admin-tools-grid {
+    grid-template-columns: 1fr;
+  }
+
   .summary-layout {
     grid-template-columns: 1fr;
   }
@@ -260,6 +355,19 @@
 }
 
 @media (max-width: 760px) {
+  .admin-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pending-user-inline-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pending-user-inline-item button {
+    width: 100%;
+  }
+
   .summary-highlight-grid,
   .summary-secondary-grid {
     grid-template-columns: 1fr;
