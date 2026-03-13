@@ -206,6 +206,10 @@ export async function peladaRoutes(fastify) {
         id: String(team._id),
         name: team.name,
         goalkeepers: team.goalkeepers || [],
+        guestPlayers: (team.guestPlayers || []).map((guest) => ({
+          name: guest.name,
+          position: guest.position
+        })),
         wins: team.wins || 0,
         draws: team.draws || 0,
         losses: team.losses || 0,
@@ -265,6 +269,14 @@ export async function peladaRoutes(fastify) {
       pelada.teams = teams.map((team) => ({
         name: team.name.trim(),
         players: team.players,
+        guestPlayers: Array.isArray(team.guestPlayers)
+          ? team.guestPlayers.map((guest) => ({
+              name: String(guest.name || '').trim(),
+              position: String(guest.position || '')
+                .trim()
+                .toUpperCase()
+            }))
+          : [],
         goalkeepers: Array.isArray(team.goalkeepers)
           ? team.goalkeepers.map((goalkeeper) => String(goalkeeper).trim()).filter(Boolean)
           : [],

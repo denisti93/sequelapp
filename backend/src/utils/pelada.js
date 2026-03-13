@@ -32,14 +32,40 @@ export function validateTeamsShape(teams) {
   }
 
   const usedPlayers = new Set();
+  const validPositions = new Set(['ZAGUEIRO', 'MEIA', 'ATACANTE']);
 
   for (const team of teams) {
     if (!team?.name || typeof team.name !== 'string') {
       return 'Cada time precisa de um nome valido.';
     }
 
-    if (!Array.isArray(team.players) || team.players.length !== 5) {
-      return `O time ${team.name} deve ter exatamente 5 jogadores.`;
+    if (!Array.isArray(team.players)) {
+      return `O time ${team.name} deve informar os jogadores cadastrados em lista.`;
+    }
+
+    if (team.guestPlayers && !Array.isArray(team.guestPlayers)) {
+      return `Os convidados do time ${team.name} devem ser uma lista.`;
+    }
+
+    const guestPlayers = Array.isArray(team.guestPlayers) ? team.guestPlayers : [];
+    const totalPlayers = team.players.length + guestPlayers.length;
+    if (totalPlayers !== 5) {
+      return `O time ${team.name} deve ter exatamente 5 jogadores (cadastrados + convidados).`;
+    }
+
+    for (const guest of guestPlayers) {
+      const guestName = String(guest?.name || '').trim();
+      const guestPosition = String(guest?.position || '')
+        .trim()
+        .toUpperCase();
+
+      if (!guestName) {
+        return `Todo convidado do time ${team.name} precisa de nome.`;
+      }
+
+      if (!validPositions.has(guestPosition)) {
+        return `Todo convidado do time ${team.name} precisa de posicao valida (ZAGUEIRO, MEIA ou ATACANTE).`;
+      }
     }
 
     for (const playerId of team.players) {

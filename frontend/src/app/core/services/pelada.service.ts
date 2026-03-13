@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import {
   PeladaDetail,
   PeladaSummary,
+  PlayerPosition,
   RatingCardsResponse,
   VoteDetailsResponse
 } from '../../models/pelada';
@@ -17,6 +18,10 @@ interface CreatePeladaInput {
 interface TeamInput {
   name: string;
   players: string[];
+  guestPlayers: Array<{
+    name: string;
+    position: PlayerPosition;
+  }>;
   goalkeepers: string[];
 }
 

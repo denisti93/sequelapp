@@ -22,10 +22,16 @@ export interface PeladaPlayer {
   ratingAverage: number;
 }
 
+export interface PeladaGuestPlayer {
+  name: string;
+  position: PlayerPosition;
+}
+
 export interface PeladaTeam {
   id: string;
   name: string;
   goalkeepers: string[];
+  guestPlayers: PeladaGuestPlayer[];
   wins: number;
   draws: number;
   losses: number;

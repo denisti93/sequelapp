@@ -119,6 +119,20 @@ const teamSchema = new mongoose.Schema(
         required: true
       }
     ],
+    guestPlayers: [
+      {
+        name: {
+          type: String,
+          required: true,
+          trim: true
+        },
+        position: {
+          type: String,
+          enum: ['ZAGUEIRO', 'MEIA', 'ATACANTE'],
+          required: true
+        }
+      }
+    ],
     goalkeepers: [
       {
         type: String,

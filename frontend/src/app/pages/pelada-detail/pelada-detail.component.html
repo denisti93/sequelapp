@@ -63,8 +63,11 @@
                     <div class="pitch-buttons">
                       @for (player of layout.attack; track player.id) {
                         <span class="field-player" [attr.title]="player.name">
-                          <span class="button-player"></span>
+                          <span class="button-player" [class.guest]="player.isGuest"></span>
                           <small class="field-player-name">{{ playerShortName(player.name) }}</small>
+                          @if (player.isGuest) {
+                            <small class="field-player-tag">Convidado</small>
+                          }
                         </span>
                       }
                     </div>
@@ -74,8 +77,11 @@
                     <div class="pitch-buttons">
                       @for (player of layout.midfield; track player.id) {
                         <span class="field-player" [attr.title]="player.name">
-                          <span class="button-player"></span>
+                          <span class="button-player" [class.guest]="player.isGuest"></span>
                           <small class="field-player-name">{{ playerShortName(player.name) }}</small>
+                          @if (player.isGuest) {
+                            <small class="field-player-tag">Convidado</small>
+                          }
                         </span>
                       }
                     </div>
@@ -85,13 +91,20 @@
                     <div class="pitch-buttons">
                       @for (player of layout.defense; track player.id) {
                         <span class="field-player" [attr.title]="player.name">
-                          <span class="button-player"></span>
+                          <span class="button-player" [class.guest]="player.isGuest"></span>
                           <small class="field-player-name">{{ playerShortName(player.name) }}</small>
+                          @if (player.isGuest) {
+                            <small class="field-player-tag">Convidado</small>
+                          }
                         </span>
                       }
                     </div>
                   </div>
                 </div>
+              }
+
+              @if (team.guestPlayers.length > 0) {
+                <p class="muted">Convidados: {{ formatGuestPlayers(team.guestPlayers) }}</p>
               }
 
               @if (team.goalkeepers.length > 0) {
@@ -232,6 +245,7 @@
     @if (authService.isAdmin) {
       <section class="panel">
         <h2 class="panel-title">Configurar times (4 times x 5 jogadores)</h2>
+        <p class="muted">Cada time deve ter 5 jogadores somando cadastrados e convidados.</p>
 
         <form [formGroup]="teamForm" class="page-grid" (ngSubmit)="saveTeams()">
           <div formArrayName="teams" class="team-form-grid">
@@ -245,7 +259,7 @@
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
-                  <mat-label>Jogadores (5)</mat-label>
+                  <mat-label>Jogadores cadastrados</mat-label>
                   <mat-select formControlName="players" multiple (selectionChange)="onTeamPlayersChanged(i)">
                     @for (user of users; track user.id) {
                       <mat-option [value]="user.id" [disabled]="isPlayerUnavailableForTeam(user.id, i)">
@@ -256,12 +270,69 @@
                 </mat-form-field>
 
                 <div class="selected-players-box">
-                  <small class="muted">Selecionados:</small>
+                  <small class="muted">
+                    Cadastrados {{ getRegisteredPlayersCount(i) }} + convidados {{ getGuestPlayersCount(i) }} = {{
+                      totalTeamPlayersCount(i)
+                    }}/5
+                  </small>
                   <mat-chip-set>
                     @for (name of getSelectedPlayersForTeam(i); track name) {
                       <mat-chip>{{ name }}</mat-chip>
                     }
                   </mat-chip-set>
+                </div>
+
+                <div class="guest-editor" formArrayName="guestPlayers">
+                  <div class="guest-editor-header">
+                    <strong>Convidados</strong>
+                    <span class="muted">Não entram em votação e estatísticas</span>
+                  </div>
+
+                  <div class="guest-rows">
+                    @for (guestCtrl of guestPlayersArray(i).controls; track guestCtrl; let guestIndex = $index) {
+                      <div class="guest-row" [formGroupName]="guestIndex">
+                        <div class="guest-row-fields">
+                          <mat-form-field appearance="outline" class="guest-name-field">
+                            <mat-label>Nome do convidado</mat-label>
+                            <input matInput formControlName="name" />
+                          </mat-form-field>
+
+                          <mat-form-field appearance="outline" class="guest-position-field">
+                            <mat-label>Posição</mat-label>
+                            <mat-select formControlName="position">
+                              @for (positionOption of guestPositionOptions; track positionOption.value) {
+                                <mat-option [value]="positionOption.value">{{ positionOption.label }}</mat-option>
+                              }
+                            </mat-select>
+                          </mat-form-field>
+                        </div>
+
+                        <button
+                          mat-stroked-button
+                          color="warn"
+                          type="button"
+                          class="guest-remove-btn"
+                          aria-label="Remover convidado"
+                          (click)="removeGuestPlayer(i, guestIndex)"
+                          [disabled]="actionLoading || isConcluded"
+                        >
+                          <mat-icon>close</mat-icon>
+                          Remover
+                        </button>
+                      </div>
+                    }
+                  </div>
+
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    color="primary"
+                    (click)="addGuestPlayer(i)"
+                    [disabled]="actionLoading || isConcluded || !canAddGuestPlayer(i)"
+                  >
+                    <mat-icon>person_add</mat-icon>
+                    Adicionar convidado
+                  </button>
                 </div>
 
                 <mat-form-field appearance="outline">

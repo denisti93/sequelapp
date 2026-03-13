@@ -333,6 +333,11 @@
   user-select: none;
 }
 
+.button-player.guest {
+  background: radial-gradient(circle at 34% 30%, #fb923c 0%, #ea580c 50%, #7c3aed 100%);
+  border-color: #c4b5fd;
+}
+
 .field-player-name {
   font-size: 0.6rem;
   font-weight: 700;
@@ -344,6 +349,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.field-player-tag {
+  font-size: 0.48rem;
+  font-weight: 700;
+  color: #fef3c7;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .champion-tag {
@@ -380,6 +393,53 @@
 .team-editor {
   display: grid;
   gap: 8px;
+}
+
+.guest-editor {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  background: #fff;
+  display: grid;
+  gap: 8px;
+}
+
+.guest-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.guest-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.guest-row {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fffdfd;
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.guest-row-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.guest-row-fields .mat-mdc-form-field {
+  width: 100%;
+}
+
+.guest-remove-btn {
+  justify-self: end;
+  min-width: 108px;
 }
 
 .selected-players-box {
@@ -741,6 +801,19 @@ h3 {
     grid-template-columns: 1fr;
   }
 
+  .guest-row {
+    grid-template-columns: 1fr;
+  }
+
+  .guest-row-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .guest-remove-btn {
+    width: 100%;
+    justify-self: stretch;
+  }
+
   .player-search-field {
     width: 100%;
   }
@@ -803,6 +876,10 @@ h3 {
 
   .field-player-name {
     font-size: 0.5rem;
+  }
+
+  .field-player-tag {
+    font-size: 0.42rem;
   }
 
   .score-quick-grid {

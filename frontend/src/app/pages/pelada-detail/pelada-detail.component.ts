@@ -25,6 +25,7 @@ import { UserService } from '../../core/services/user.service';
 import {
   CraqueVoteSelection,
   PeladaDetail,
+  PeladaGuestPlayer,
   PlayerPosition,
   RatingCard,
   RatingCardsResponse,
@@ -34,20 +35,27 @@ import { User } from '../../models/user';
 
 type FieldLine = 'DEFENSE' | 'MIDFIELD' | 'ATTACK';
 
-interface TeamFieldLayout {
-  defense: PeladaDetail['teams'][number]['players'];
-  midfield: PeladaDetail['teams'][number]['players'];
-  attack: PeladaDetail['teams'][number]['players'];
+interface TeamFieldPlayer {
+  id: string;
+  name: string;
+  position?: PlayerPosition;
+  isGuest: boolean;
 }
 
-function exactLengthValidator(length: number) {
+interface TeamFieldLayout {
+  defense: TeamFieldPlayer[];
+  midfield: TeamFieldPlayer[];
+  attack: TeamFieldPlayer[];
+}
+
+function maxLengthArrayValidator(length: number) {
   return (control: AbstractControl): ValidationErrors | null => {
     const value = control.value;
     if (!Array.isArray(value)) {
       return { invalidArray: true };
     }
 
-    return value.length === length ? null : { exactLength: { required: length } };
+    return value.length <= length ? null : { maxLengthArray: { required: length } };
   };
 }
 
@@ -93,6 +101,11 @@ export class PeladaDetailComponent implements OnInit {
   adminVoteSelections: Record<string, number> = {};
   tournamentRoundGroups: Array<{ round: number; matchIndexes: number[] }> = [];
   playerStatsSearchTerm = '';
+  readonly guestPositionOptions: Array<{ value: PlayerPosition; label: string }> = [
+    { value: 'ZAGUEIRO', label: 'Zagueiro' },
+    { value: 'MEIA', label: 'Meia' },
+    { value: 'ATACANTE', label: 'Atacante' }
+  ];
 
   readonly teamForm = this.formBuilder.group({
     teams: this.formBuilder.array([])
@@ -246,16 +259,50 @@ export class PeladaDetailComponent implements OnInit {
 
     for (let index = 0; index < totalTeams; index += 1) {
       const team = existingTeams[index];
+      const guestPlayers = (team?.guestPlayers || []).map((guest) => this.createGuestPlayerGroup(guest));
       this.teamsArray.push(
         this.formBuilder.group({
           name: [team?.name || `Time ${index + 1}`, [Validators.required]],
-          players: [team?.players?.map((player) => player.id) || [], [exactLengthValidator(5)]],
+          players: [team?.players?.map((player) => player.id) || [], [maxLengthArrayValidator(5)]],
+          guestPlayers: this.formBuilder.array(guestPlayers),
           goalkeepersText: [team?.goalkeepers?.join(', ') || '']
         })
       );
     }
 
     this.normalizeTeamSelections();
+  }
+
+  private createGuestPlayerGroup(guest?: PeladaGuestPlayer) {
+    return this.formBuilder.group({
+      name: [guest?.name || '', [Validators.required]],
+      position: [guest?.position || 'MEIA', [Validators.required]]
+    });
+  }
+
+  guestPlayersArray(teamIndex: number): UntypedFormArray {
+    return this.teamsArray.at(teamIndex).get('guestPlayers') as UntypedFormArray;
+  }
+
+  addGuestPlayer(teamIndex: number): void {
+    if (this.actionLoading || this.isConcluded || !this.canAddGuestPlayer(teamIndex)) {
+      return;
+    }
+
+    this.guestPlayersArray(teamIndex).push(this.createGuestPlayerGroup());
+  }
+
+  removeGuestPlayer(teamIndex: number, guestIndex: number): void {
+    if (this.actionLoading || this.isConcluded) {
+      return;
+    }
+
+    const guestsArray = this.guestPlayersArray(teamIndex);
+    if (guestIndex < 0 || guestIndex >= guestsArray.length) {
+      return;
+    }
+
+    guestsArray.removeAt(guestIndex);
   }
 
   private getTeamPlayerIds(teamIndex: number): string[] {
@@ -299,6 +346,10 @@ export class PeladaDetailComponent implements OnInit {
       return false;
     }
 
+    if (this.totalTeamPlayersCount(currentTeamIndex) >= 5) {
+      return true;
+    }
+
     for (let index = 0; index < this.teamsArray.length; index += 1) {
       if (index === currentTeamIndex) {
         continue;
@@ -338,6 +389,22 @@ export class PeladaDetailComponent implements OnInit {
       .map((userId) => usersById.get(userId)?.name)
       .filter((name): name is string => Boolean(name))
       .sort((a, b) => a.localeCompare(b));
+  }
+
+  getRegisteredPlayersCount(teamIndex: number): number {
+    return this.getTeamPlayerIds(teamIndex).length;
+  }
+
+  getGuestPlayersCount(teamIndex: number): number {
+    return this.guestPlayersArray(teamIndex).length;
+  }
+
+  totalTeamPlayersCount(teamIndex: number): number {
+    return this.getRegisteredPlayersCount(teamIndex) + this.getGuestPlayersCount(teamIndex);
+  }
+
+  canAddGuestPlayer(teamIndex: number): boolean {
+    return this.totalTeamPlayersCount(teamIndex) < 5;
   }
 
   private buildResultsForm(pelada: PeladaDetail): void {
@@ -523,6 +590,7 @@ export class PeladaDetailComponent implements OnInit {
     const rawTeams = this.teamsArray.getRawValue() as Array<{
       name: string;
       players: string[];
+      guestPlayers: Array<{ name: string; position: PlayerPosition }>;
       goalkeepersText: string;
     }>;
 
@@ -534,11 +602,53 @@ export class PeladaDetailComponent implements OnInit {
       return;
     }
 
+    const validPositions: PlayerPosition[] = ['ZAGUEIRO', 'MEIA', 'ATACANTE'];
+    for (const team of rawTeams) {
+      const teamName = String(team.name || 'Time').trim();
+      const registeredCount = Array.isArray(team.players) ? team.players.length : 0;
+      const guestPlayers = Array.isArray(team.guestPlayers) ? team.guestPlayers : [];
+
+      if (registeredCount + guestPlayers.length !== 5) {
+        this.snackBar.open(
+          `O time ${teamName || 'sem nome'} precisa ter exatamente 5 jogadores entre cadastrados e convidados.`,
+          'Fechar',
+          {
+            duration: 3200
+          }
+        );
+        return;
+      }
+
+      for (const guest of guestPlayers) {
+        const guestName = String(guest?.name || '').trim();
+        const guestPosition = String(guest?.position || '')
+          .trim()
+          .toUpperCase() as PlayerPosition;
+
+        if (!guestName || !validPositions.includes(guestPosition)) {
+          this.snackBar.open(
+            `Todo convidado do time ${teamName || 'sem nome'} precisa de nome e posição válidos.`,
+            'Fechar',
+            {
+              duration: 3200
+            }
+          );
+          return;
+        }
+      }
+    }
+
     this.actionLoading = true;
 
     const payload = rawTeams.map((team) => ({
       name: team.name,
       players: team.players,
+      guestPlayers: (team.guestPlayers || []).map((guest) => ({
+        name: String(guest.name || '').trim(),
+        position: String(guest.position || '')
+          .trim()
+          .toUpperCase() as PlayerPosition
+      })),
       goalkeepers: String(team.goalkeepersText || '')
         .split(',')
         .map((item) => item.trim())
@@ -1030,15 +1140,27 @@ export class PeladaDetailComponent implements OnInit {
   }
 
   teamFieldLayout(team: PeladaDetail['teams'][number]): TeamFieldLayout {
-    const lines: Record<FieldLine, PeladaDetail['teams'][number]['players']> = {
+    const lines: Record<FieldLine, TeamFieldPlayer[]> = {
       DEFENSE: [],
       MIDFIELD: [],
       ATTACK: []
     };
     const maxPerLine = 2;
 
-    const players = [...(team.players || [])].sort((a, b) => a.name.localeCompare(b.name));
-    const unassigned: PeladaDetail['teams'][number]['players'] = [];
+    const registeredPlayers: TeamFieldPlayer[] = (team.players || []).map((player) => ({
+      id: player.id,
+      name: player.name,
+      position: player.position,
+      isGuest: false
+    }));
+    const guestPlayers: TeamFieldPlayer[] = (team.guestPlayers || []).map((guest, index) => ({
+      id: `guest-${team.id}-${index}`,
+      name: guest.name,
+      position: guest.position,
+      isGuest: true
+    }));
+    const players = [...registeredPlayers, ...guestPlayers].sort((a, b) => a.name.localeCompare(b.name));
+    const unassigned: TeamFieldPlayer[] = [];
 
     for (const player of players) {
       const preferredLine = this.preferredLineFromPosition(player.position);
@@ -1082,6 +1204,12 @@ export class PeladaDetailComponent implements OnInit {
     return `${homeGoals} x ${awayGoals}`;
   }
 
+  formatGuestPlayers(guestPlayers: PeladaGuestPlayer[]): string {
+    return (guestPlayers || [])
+      .map((guest) => `${guest.name} (${this.positionLabel(guest.position)})`)
+      .join(', ');
+  }
+
   private normalizeSearch(value: string): string {
     return String(value || '')
       .normalize('NFD')
@@ -1099,7 +1227,7 @@ export class PeladaDetailComponent implements OnInit {
 
   private selectLine(
     preferredLine: FieldLine,
-    lines: Record<FieldLine, PeladaDetail['teams'][number]['players']>,
+    lines: Record<FieldLine, TeamFieldPlayer[]>,
     maxPerLine: number
   ): FieldLine {
     if (lines[preferredLine].length < maxPerLine) {
@@ -1122,7 +1250,7 @@ export class PeladaDetailComponent implements OnInit {
   }
 
   private smallestLine(
-    lines: Record<FieldLine, PeladaDetail['teams'][number]['players']>,
+    lines: Record<FieldLine, TeamFieldPlayer[]>,
     priorityOrder: FieldLine[],
     maxPerLine?: number
   ): FieldLine {
@@ -1139,7 +1267,7 @@ export class PeladaDetailComponent implements OnInit {
     }, source[0]);
   }
 
-  private ensureMinOnePerLine(lines: Record<FieldLine, PeladaDetail['teams'][number]['players']>): void {
+  private ensureMinOnePerLine(lines: Record<FieldLine, TeamFieldPlayer[]>): void {
     const required: FieldLine[] = ['DEFENSE', 'MIDFIELD', 'ATTACK'];
 
     for (const targetLine of required) {
@@ -1160,5 +1288,12 @@ export class PeladaDetailComponent implements OnInit {
         lines[targetLine].push(movedPlayer);
       }
     }
+  }
+
+  private positionLabel(position?: PlayerPosition): string {
+    if (position === 'ZAGUEIRO') return 'Zagueiro';
+    if (position === 'MEIA') return 'Meia';
+    if (position === 'ATACANTE') return 'Atacante';
+    return '-';
   }
 }
