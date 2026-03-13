@@ -47,13 +47,6 @@
               </mat-card-subtitle>
             </mat-card-header>
             <mat-card-content>
-              @if (isChampionTeam(team.id)) {
-                <p class="champion-tag">
-                  <mat-icon>emoji_events</mat-icon>
-                  Campeão: time vencedor
-                </p>
-              }
-
               <p class="muted">Formação no campo</p>
               @if (teamFieldLayout(team); as layout) {
                 <div class="team-pitch">
@@ -105,7 +98,14 @@
                 <p class="muted">Goleiros: {{ team.goalkeepers.join(', ') }}</p>
               }
             </mat-card-content>
+            @if (isChampionTeam(team.id)) {
+                <p class="champion-tag">
+                  <mat-icon>emoji_events</mat-icon>
+                  Campeão: time vencedor
+                </p>
+              }
           </mat-card>
+
         }
       </div>
     </section>

@@ -3,45 +3,211 @@
   min-width: 680px;
 }
 
-.summary-metrics {
+.player-summary-panel {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
-.position-form {
+.summary-panel-header {
   display: flex;
-  align-items: center;
+  justify-content: space-between;
+  align-items: flex-start;
   gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
 }
 
-.position-field {
-  min-width: 220px;
+.summary-panel-header .panel-title {
+  margin-bottom: 4px;
 }
 
-.position-chip {
-  background: linear-gradient(90deg, #e9dcff, #ffe6d4);
+.summary-panel-header p {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.summary-total-chip {
+  background: linear-gradient(90deg, #e9dcff, #ffe4cf);
+  font-weight: 700;
+}
+
+.summary-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.summary-main {
+  display: grid;
+  gap: 10px;
+}
+
+.summary-player-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.summary-player-name {
+  margin: 0;
+  color: #4c1d95;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.summary-highlight-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.summary-secondary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .metric-card {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px;
-  background: linear-gradient(140deg, #f3e8ff, #ffe7d6);
+  background: linear-gradient(160deg, #fef9ff, #fff3ea);
   display: grid;
   gap: 4px;
 }
 
 .metric-card strong {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   color: #5b21b6;
+}
+
+.metric-card.highlight {
+  background: linear-gradient(155deg, #f3e6ff, #ffe8d8);
+  border-color: #d9c2fb;
+}
+
+.metric-card.compact strong {
+  font-size: 1.1rem;
+}
+
+.metric-goals strong {
+  color: #b45309;
+}
+
+.metric-assists strong {
+  color: #5b21b6;
+}
+
+.metric-wins strong {
+  color: #7e22ce;
 }
 
 .metric-label {
   font-size: 0.82rem;
   color: var(--text-muted);
+}
+
+.metric-card.wide {
+  grid-column: 1 / -1;
+}
+
+.metric-headline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.metric-podium {
+  gap: 8px;
+}
+
+.metric-podium-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.metric-podium-header strong {
+  font-size: 1.5rem;
+  color: #c2410c;
+}
+
+.podium-rank-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.podium-rank-card {
+  border: 1px solid #e4d0fa;
+  border-radius: 10px;
+  padding: 8px;
+  background: linear-gradient(155deg, #faf2ff, #fff2e7);
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+
+.podium-rank-card strong {
+  font-size: 1.06rem;
+}
+
+.podium-rank-card.first strong {
+  color: #c2410c;
+}
+
+.podium-rank-card.second strong {
+  color: #7c3aed;
+}
+
+.podium-rank-card.third strong {
+  color: #9a3412;
+}
+
+.podium-rank-label {
+  font-size: 0.72rem;
+  color: #6b5a7d;
+}
+
+.summary-profile-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: linear-gradient(165deg, #fffdfd, #fff3e9);
+  display: grid;
+  gap: 10px;
+}
+
+.summary-profile-card h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.summary-profile-card p {
+  margin: 0;
+  font-size: 0.83rem;
+}
+
+.summary-position-form {
+  display: grid;
+  gap: 10px;
+}
+
+.summary-position-field {
+  width: 100%;
+}
+
+.summary-position-form button {
+  width: 100%;
+  justify-content: center;
+}
+
+.position-chip {
+  background: linear-gradient(90deg, #e9dcff, #ffe6d4);
 }
 
 .racha-status-chip {
@@ -83,22 +249,28 @@
   gap: 6px;
 }
 
-@media (max-width: 760px) {
-  .position-form {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .position-field {
-    width: 100%;
-  }
-
-  .position-form button {
-    width: 100%;
-  }
-
-  .summary-metrics {
+@media (max-width: 960px) {
+  .summary-layout {
     grid-template-columns: 1fr;
+  }
+
+  .summary-highlight-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .summary-highlight-grid,
+  .summary-secondary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .podium-rank-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .metric-card.wide {
+    grid-column: auto;
   }
 
   .desktop-table {

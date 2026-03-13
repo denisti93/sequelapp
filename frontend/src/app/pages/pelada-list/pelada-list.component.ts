@@ -189,6 +189,26 @@ export class PeladaListComponent implements OnInit {
     return 'Não definida';
   }
 
+  totalMatches(summary: User | null): number {
+    if (!summary) {
+      return 0;
+    }
+
+    return Number(summary.totalWins || 0) + Number(summary.totalDraws || 0) + Number(summary.totalLosses || 0);
+  }
+
+  totalTop3Appearances(summary: User | null): number {
+    if (!summary) {
+      return 0;
+    }
+
+    return (
+      Number(summary.totalCraqueFirstPlaces || 0) +
+      Number(summary.totalCraqueSecondPlaces || 0) +
+      Number(summary.totalCraqueThirdPlaces || 0)
+    );
+  }
+
   votingStatusLabel(votingStatus: PeladaSummary['votingStatus']): string {
     if (votingStatus === 'OPEN') return 'Aberta';
     if (votingStatus === 'FINISHED') return 'Finalizada';

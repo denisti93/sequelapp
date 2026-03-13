@@ -1,65 +1,99 @@
 <div class="page-container page-grid">
   @if (!authService.isAdmin) {
-    <section class="panel">
-      <h2 class="panel-title">Meu resumo geral</h2>
+    <section class="panel player-summary-panel">
+      <div class="summary-panel-header">
+        <div>
+          <h2 class="panel-title">Meu resumo geral</h2>
+          <p class="muted">Visão consolidada de desempenho em todos os rachas.</p>
+        </div>
+        @if (mySummary) {
+          <span class="status-chip summary-total-chip">{{ totalMatches(mySummary) }} jogo(s)</span>
+        }
+      </div>
+
       @if (summaryLoading) {
         <mat-progress-bar mode="indeterminate"></mat-progress-bar>
       } @else if (mySummary) {
-        <form [formGroup]="positionForm" class="position-form" (ngSubmit)="saveMyPosition()">
-          <mat-form-field appearance="outline" class="position-field">
-            <mat-label>Minha posição em campo</mat-label>
-            <mat-select formControlName="position">
-              @for (option of playerPositionOptions; track option.value) {
-                <mat-option [value]="option.value">{{ option.label }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
+        <div class="summary-layout">
+          <div class="summary-main">
+            <div class="summary-player-row">
+              <h3 class="summary-player-name">{{ mySummary.name }}</h3>
+              <span class="status-chip position-chip">Posição: {{ playerPositionLabel(mySummary.position) }}</span>
+            </div>
 
-          <button
-            mat-flat-button
-            color="primary"
-            type="submit"
-            [disabled]="positionLoading || summaryLoading || positionForm.invalid"
-          >
-            Salvar posição
-          </button>
+            <div class="summary-highlight-grid">
+              <div class="metric-card highlight metric-goals">
+                <span class="metric-label">Gols</span>
+                <strong>{{ mySummary.totalGoals || 0 }}</strong>
+              </div>
+              <div class="metric-card highlight metric-assists">
+                <span class="metric-label">Assistências</span>
+                <strong>{{ mySummary.totalAssists || 0 }}</strong>
+              </div>
+              <div class="metric-card highlight metric-wins">
+                <span class="metric-label">Vitórias</span>
+                <strong>{{ mySummary.totalWins || 0 }}</strong>
+              </div>
+            </div>
 
-          <span class="status-chip position-chip">
-            Atual: {{ playerPositionLabel(mySummary.position) }}
-          </span>
-        </form>
+            <div class="summary-secondary-grid">
+              <div class="metric-card compact">
+                <span class="metric-label">Empates</span>
+                <strong>{{ mySummary.totalDraws || 0 }}</strong>
+              </div>
+              <div class="metric-card compact">
+                <span class="metric-label">Derrotas</span>
+                <strong>{{ mySummary.totalLosses || 0 }}</strong>
+              </div>
 
-        <div class="summary-metrics">
-          <div class="metric-card">
-            <span class="metric-label">Gols</span>
-            <strong>{{ mySummary.totalGoals || 0 }}</strong>
+              <div class="metric-card wide metric-podium">
+                <div class="metric-podium-header">
+                  <span class="metric-label">Presenças no Top 3</span>
+                  <strong>{{ totalTop3Appearances(mySummary) }}</strong>
+                </div>
+                <small class="muted">Total de vezes entre os três melhores do craque do racha.</small>
+                <div class="podium-rank-grid">
+                  <div class="podium-rank-card first">
+                    <span class="podium-rank-label">1º lugar</span>
+                    <strong>{{ mySummary.totalCraqueFirstPlaces || 0 }}</strong>
+                  </div>
+                  <div class="podium-rank-card second">
+                    <span class="podium-rank-label">2º lugar</span>
+                    <strong>{{ mySummary.totalCraqueSecondPlaces || 0 }}</strong>
+                  </div>
+                  <div class="podium-rank-card third">
+                    <span class="podium-rank-label">3º lugar</span>
+                    <strong>{{ mySummary.totalCraqueThirdPlaces || 0 }}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="metric-card">
-            <span class="metric-label">Assistências</span>
-            <strong>{{ mySummary.totalAssists || 0 }}</strong>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">Vitórias</span>
-            <strong>{{ mySummary.totalWins || 0 }}</strong>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">Empates</span>
-            <strong>{{ mySummary.totalDraws || 0 }}</strong>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">Derrotas</span>
-            <strong>{{ mySummary.totalLosses || 0 }}</strong>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">Pontos no Pódio</span>
-            <strong>{{ mySummary.totalCraquePoints || 0 }}</strong>
-          </div>
-          <div class="metric-card">
-            <span class="metric-label">Pódios (1º/2º/3º)</span>
-            <strong>
-              {{ mySummary.totalCraqueFirstPlaces || 0 }}/{{ mySummary.totalCraqueSecondPlaces || 0 }}/{{ mySummary.totalCraqueThirdPlaces || 0 }}
-            </strong>
-          </div>
+
+          <aside class="summary-profile-card">
+            <h3>Perfil em campo</h3>
+            <p class="muted">Defina sua posição principal para organizar melhor os times no campo.</p>
+
+            <form [formGroup]="positionForm" class="summary-position-form" (ngSubmit)="saveMyPosition()">
+              <mat-form-field appearance="outline" class="summary-position-field">
+                <mat-label>Minha posição</mat-label>
+                <mat-select formControlName="position">
+                  @for (option of playerPositionOptions; track option.value) {
+                    <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <button
+                mat-flat-button
+                color="primary"
+                type="submit"
+                [disabled]="positionLoading || summaryLoading || positionForm.invalid"
+              >
+                Salvar posição
+              </button>
+            </form>
+          </aside>
         </div>
       } @else {
         <p class="muted">Não foi possível carregar seu resumo neste momento.</p>
