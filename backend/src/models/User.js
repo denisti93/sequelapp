@@ -83,6 +83,10 @@ const userSchema = new mongoose.Schema(
     totalCraqueThirdPlaces: {
       type: Number,
       default: 0
+    },
+    totalTournamentTitles: {
+      type: Number,
+      default: 0
     }
   },
   {

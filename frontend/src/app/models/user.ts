@@ -21,6 +21,7 @@ export interface User {
   totalCraqueFirstPlaces: number;
   totalCraqueSecondPlaces: number;
   totalCraqueThirdPlaces: number;
+  totalTournamentTitles: number;
 }
 
 export interface PendingApprovalUser {

@@ -1,5 +1,6 @@
 import { Pelada } from '../models/Pelada.js';
 import { User } from '../models/User.js';
+import { buildTournamentInfo } from '../utils/tournament.js';
 
 function toIdString(id) {
   return String(id);
@@ -23,6 +24,7 @@ export async function recalculateAllUsersStats() {
       totalCraqueFirstPlaces: 0,
       totalCraqueSecondPlaces: 0,
       totalCraqueThirdPlaces: 0,
+      totalTournamentTitles: 0,
       initialRating: Number(user.initialRating || 3)
     });
     ratings.set(key, {
@@ -31,7 +33,7 @@ export async function recalculateAllUsersStats() {
     });
   }
 
-  const peladas = await Pelada.find({}, 'teams playerStats votes craqueVotes').lean();
+  const peladas = await Pelada.find({}, 'type teams tournamentMatches playerStats votes craqueVotes').lean();
 
   for (const pelada of peladas) {
     for (const team of pelada.teams || []) {
@@ -83,6 +85,22 @@ export async function recalculateAllUsersStats() {
         thirdStat.totalCraqueThirdPlaces += 1;
       }
     }
+
+    if ((pelada.type || 'NORMAL') === 'TOURNAMENT') {
+      const tournamentInfo = buildTournamentInfo(pelada.teams || [], pelada.tournamentMatches || []);
+      if (tournamentInfo?.isCompleted && tournamentInfo?.championTeamId) {
+        const championTeam = (pelada.teams || []).find(
+          (team) => toIdString(team._id) === tournamentInfo.championTeamId
+        );
+
+        for (const playerId of championTeam?.players || []) {
+          const key = toIdString(playerId);
+          const stat = totals.get(key);
+          if (!stat) continue;
+          stat.totalTournamentTitles += 1;
+        }
+      }
+    }
   }
 
   const operations = [];
@@ -108,6 +126,7 @@ export async function recalculateAllUsersStats() {
             totalCraqueFirstPlaces: stat.totalCraqueFirstPlaces,
             totalCraqueSecondPlaces: stat.totalCraqueSecondPlaces,
             totalCraqueThirdPlaces: stat.totalCraqueThirdPlaces,
+            totalTournamentTitles: stat.totalTournamentTitles,
             ratingAverage
           }
         }

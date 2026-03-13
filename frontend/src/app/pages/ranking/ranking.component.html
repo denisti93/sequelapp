@@ -46,6 +46,62 @@
     </section>
   }
 
+  <section class="panel podium-panel">
+    <div class="podium-panel-header">
+      <div>
+        <h2 class="panel-title">Pódios da temporada</h2>
+        <p class="muted">Visão rápida dos destaques em gols, assistências e títulos de torneio.</p>
+      </div>
+    </div>
+
+    <div class="podium-grid">
+      @for (category of podiumCategories; track category.metric) {
+        <article class="podium-card">
+          <header class="podium-card-header">
+            <span class="podium-card-icon">
+              <mat-icon>{{ category.icon }}</mat-icon>
+            </span>
+            <div>
+              <h3>{{ category.title }}</h3>
+              <p class="muted">{{ category.subtitle }}</p>
+            </div>
+          </header>
+
+          @if (category.topThree.length === 0) {
+            <p class="muted podium-empty-state">Ainda sem dados para este pódio.</p>
+          } @else {
+            <div class="podium-stage">
+              @for (slot of category.slots; track $index) {
+                <div
+                  class="podium-column"
+                  [class.rank-1]="slot?.rank === 1"
+                  [class.rank-2]="slot?.rank === 2"
+                  [class.rank-3]="slot?.rank === 3"
+                  [class.is-empty]="!slot"
+                >
+                  @if (slot) {
+                    <div class="podium-player-chip">
+                      <strong class="podium-player-name">{{ slot.userName }}</strong>
+                      <span class="podium-player-score">{{ slot.value }} {{ category.unit }}</span>
+                    </div>
+                    <div class="podium-pedestal">
+                      <span class="podium-position">{{ slot.rank }}º</span>
+                    </div>
+                  } @else {
+                    <div class="podium-player-chip empty">Sem jogador</div>
+                    <div class="podium-pedestal">
+                      <span class="podium-position">--</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </article>
+      }
+    </div>
+  </section>
+
   <section class="panel">
     <div class="ranking-panel-header">
       <h2 class="panel-title">Ranking geral de jogadores</h2>
@@ -94,6 +150,11 @@
           <td mat-cell *matCellDef="let user">{{ user.totalAssists }}</td>
         </ng-container>
 
+        <ng-container matColumnDef="totalTournamentTitles">
+          <th mat-header-cell *matHeaderCellDef>Tít.</th>
+          <td mat-cell *matCellDef="let user">{{ user.totalTournamentTitles || 0 }}</td>
+        </ng-container>
+
         <ng-container matColumnDef="totalWins">
           <th mat-header-cell *matHeaderCellDef>Vit.</th>
           <td mat-cell *matCellDef="let user">{{ user.totalWins }}</td>
@@ -130,6 +191,7 @@
           <div class="mobile-stats-grid">
             <span>Gols: <strong>{{ user.totalGoals }}</strong></span>
             <span>Assist.: <strong>{{ user.totalAssists }}</strong></span>
+            <span>Tít. torneio: <strong>{{ user.totalTournamentTitles || 0 }}</strong></span>
             <span>Vit.: <strong>{{ user.totalWins }}</strong></span>
             <span>Emp.: <strong>{{ user.totalDraws }}</strong></span>
             <span>Der.: <strong>{{ user.totalLosses }}</strong></span>

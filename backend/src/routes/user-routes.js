@@ -94,7 +94,8 @@ export async function userRoutes(fastify) {
       totalCraquePoints: user.totalCraquePoints || 0,
       totalCraqueFirstPlaces: user.totalCraqueFirstPlaces || 0,
       totalCraqueSecondPlaces: user.totalCraqueSecondPlaces || 0,
-      totalCraqueThirdPlaces: user.totalCraqueThirdPlaces || 0
+      totalCraqueThirdPlaces: user.totalCraqueThirdPlaces || 0,
+      totalTournamentTitles: user.totalTournamentTitles || 0
     }));
   });
 
