@@ -19,7 +19,7 @@ export interface PeladaPlayer {
   username: string;
   role: 'ADM' | 'JOGADOR';
   position?: PlayerPosition;
-  ratingAverage: number;
+  ratingAverage?: number | null;
 }
 
 export interface PeladaGuestPlayer {
@@ -119,7 +119,7 @@ export interface RatingCard {
   playerId: string;
   name: string;
   username: string;
-  ratingAverage: number;
+  ratingAverage?: number | null;
   matchGoals: number;
   matchAssists: number;
   matchWins: number;

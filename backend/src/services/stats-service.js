@@ -33,7 +33,10 @@ export async function recalculateAllUsersStats() {
     });
   }
 
-  const peladas = await Pelada.find({}, 'type teams tournamentMatches playerStats votes craqueVotes').lean();
+  const peladas = await Pelada.find(
+    {},
+    'type votingStatus teams tournamentMatches playerStats votes craqueVotes craqueResult'
+  ).lean();
 
   for (const pelada of peladas) {
     for (const team of pelada.teams || []) {
@@ -66,23 +69,38 @@ export async function recalculateAllUsersStats() {
       rating.count += 1;
     }
 
-    for (const craqueVote of pelada.craqueVotes || []) {
-      const firstStat = totals.get(toIdString(craqueVote.firstUser));
-      if (firstStat) {
-        firstStat.totalCraquePoints += 5;
-        firstStat.totalCraqueFirstPlaces += 1;
-      }
+    if ((pelada.votingStatus || 'CLOSED') === 'FINISHED') {
+      if (pelada.craqueResult?.top3?.length) {
+        for (const item of pelada.craqueResult.top3) {
+          const stat = totals.get(toIdString(item.player));
+          if (!stat) continue;
 
-      const secondStat = totals.get(toIdString(craqueVote.secondUser));
-      if (secondStat) {
-        secondStat.totalCraquePoints += 3;
-        secondStat.totalCraqueSecondPlaces += 1;
-      }
+          stat.totalCraquePoints += Number(item.points || 0);
+          stat.totalCraqueFirstPlaces += Number(item.firstPlaces || 0);
+          stat.totalCraqueSecondPlaces += Number(item.secondPlaces || 0);
+          stat.totalCraqueThirdPlaces += Number(item.thirdPlaces || 0);
+        }
+      } else {
+        // Compatibilidade com peladas antigas sem snapshot de resultado.
+        for (const craqueVote of pelada.craqueVotes || []) {
+          const firstStat = totals.get(toIdString(craqueVote.firstUser));
+          if (firstStat) {
+            firstStat.totalCraquePoints += 5;
+            firstStat.totalCraqueFirstPlaces += 1;
+          }
 
-      const thirdStat = totals.get(toIdString(craqueVote.thirdUser));
-      if (thirdStat) {
-        thirdStat.totalCraquePoints += 1;
-        thirdStat.totalCraqueThirdPlaces += 1;
+          const secondStat = totals.get(toIdString(craqueVote.secondUser));
+          if (secondStat) {
+            secondStat.totalCraquePoints += 3;
+            secondStat.totalCraqueSecondPlaces += 1;
+          }
+
+          const thirdStat = totals.get(toIdString(craqueVote.thirdUser));
+          if (thirdStat) {
+            thirdStat.totalCraquePoints += 1;
+            thirdStat.totalCraqueThirdPlaces += 1;
+          }
+        }
       }
     }
 

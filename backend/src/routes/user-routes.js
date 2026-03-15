@@ -1,6 +1,10 @@
 import { authenticate, authorize } from '../middleware/auth.js';
 import { User } from '../models/User.js';
 import { recalculateAllUsersStats } from '../services/stats-service.js';
+import {
+  canRequesterSeeRatings,
+  sanitizeUserPayloadForRole
+} from '../utils/user-visibility.js';
 
 export async function userRoutes(fastify) {
   fastify.get('/me', { preHandler: [authenticate] }, async (request) => {
@@ -9,7 +13,7 @@ export async function userRoutes(fastify) {
       return { message: 'Usuario nao encontrado.' };
     }
 
-    return user.toJSON();
+    return sanitizeUserPayloadForRole(user.toJSON(), request.user.role);
   });
 
   fastify.patch('/me/position', { preHandler: [authenticate] }, async (request, reply) => {
@@ -39,7 +43,7 @@ export async function userRoutes(fastify) {
 
     return {
       message: 'Posicao atualizada com sucesso.',
-      user: user.toJSON()
+      user: sanitizeUserPayloadForRole(user.toJSON(), request.user.role)
     };
   });
 
@@ -70,12 +74,17 @@ export async function userRoutes(fastify) {
     }
   );
 
-  fastify.get('/', { preHandler: [authenticate] }, async () => {
+  fastify.get('/', { preHandler: [authenticate] }, async (request) => {
+    const canSeeRatings = canRequesterSeeRatings(request.user);
+    const sort = canSeeRatings
+      ? { totalGoals: -1, totalAssists: -1, ratingAverage: -1, name: 1 }
+      : { totalGoals: -1, totalAssists: -1, name: 1 };
+
     const users = await User.find({
       role: 'JOGADOR',
       $or: [{ approvalStatus: 'APPROVED' }, { approvalStatus: { $exists: false } }]
     })
-      .sort({ totalGoals: -1, totalAssists: -1, ratingAverage: -1, name: 1 })
+      .sort(sort)
       .lean();
 
     return users.map((user) => ({
@@ -85,7 +94,7 @@ export async function userRoutes(fastify) {
       role: user.role,
       position: user.position,
       approvalStatus: user.approvalStatus || 'APPROVED',
-      ratingAverage: user.ratingAverage,
+      ...(canSeeRatings ? { ratingAverage: user.ratingAverage } : {}),
       totalGoals: user.totalGoals,
       totalAssists: user.totalAssists,
       totalWins: user.totalWins,
@@ -122,7 +131,7 @@ export async function userRoutes(fastify) {
 
       return {
         message: 'Jogador aprovado com sucesso.',
-        user: user.toJSON()
+        user: sanitizeUserPayloadForRole(user.toJSON(), request.user.role)
       };
     }
   );
@@ -154,7 +163,7 @@ export async function userRoutes(fastify) {
 
       await recalculateAllUsersStats();
 
-      return user.toJSON();
+      return sanitizeUserPayloadForRole(user.toJSON(), request.user.role);
     }
   );
 }

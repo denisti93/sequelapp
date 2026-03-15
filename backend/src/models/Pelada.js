@@ -52,6 +52,54 @@ const craqueVoteSchema = new mongoose.Schema(
   }
 );
 
+const craqueResultItemSchema = new mongoose.Schema(
+  {
+    position: {
+      type: Number,
+      min: 1,
+      max: 3,
+      required: true
+    },
+    player: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    points: {
+      type: Number,
+      default: 0
+    },
+    firstPlaces: {
+      type: Number,
+      default: 0
+    },
+    secondPlaces: {
+      type: Number,
+      default: 0
+    },
+    thirdPlaces: {
+      type: Number,
+      default: 0
+    }
+  },
+  {
+    _id: false
+  }
+);
+
+const craqueResultSchema = new mongoose.Schema(
+  {
+    totalBallots: {
+      type: Number,
+      default: 0
+    },
+    top3: [craqueResultItemSchema]
+  },
+  {
+    _id: false
+  }
+);
+
 const playerStatSchema = new mongoose.Schema(
   {
     player: {
@@ -194,7 +242,11 @@ const peladaSchema = new mongoose.Schema(
       required: true
     },
     votes: [voteSchema],
-    craqueVotes: [craqueVoteSchema]
+    craqueVotes: [craqueVoteSchema],
+    craqueResult: {
+      type: craqueResultSchema,
+      default: null
+    }
   },
   {
     timestamps: true

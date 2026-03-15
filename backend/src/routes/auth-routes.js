@@ -1,5 +1,6 @@
 import { User } from '../models/User.js';
 import { comparePassword, hashPassword } from '../utils/password.js';
+import { sanitizeUserPayloadForRole } from '../utils/user-visibility.js';
 
 function issueToken(fastify, user) {
   return fastify.jwt.sign(
@@ -81,7 +82,7 @@ export async function authRoutes(fastify) {
     const token = issueToken(fastify, user);
     return {
       token,
-      user: user.toJSON()
+      user: sanitizeUserPayloadForRole(user.toJSON(), user.role)
     };
   });
 }

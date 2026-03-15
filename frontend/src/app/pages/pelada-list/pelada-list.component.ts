@@ -80,6 +80,38 @@ export class PeladaListComponent implements OnInit {
     }
   }
 
+  get featuredRacha(): PeladaSummary | null {
+    const openRachas = this.peladas.filter((racha) => racha.status === 'OPEN');
+    if (openRachas.length === 0) {
+      return null;
+    }
+
+    const now = Date.now();
+    const toTime = (racha: PeladaSummary) => new Date(racha.date).getTime();
+
+    const alreadyHappenedOpen = openRachas
+      .filter((racha) => toTime(racha) <= now)
+      .sort((a, b) => toTime(b) - toTime(a));
+
+    if (alreadyHappenedOpen.length > 0) {
+      return alreadyHappenedOpen[0];
+    }
+
+    const upcomingOpen = openRachas
+      .filter((racha) => toTime(racha) > now)
+      .sort((a, b) => toTime(a) - toTime(b));
+
+    return upcomingOpen[0] || null;
+  }
+
+  get historicalPeladas(): PeladaSummary[] {
+    if (!this.featuredRacha) {
+      return this.peladas;
+    }
+
+    return this.peladas.filter((racha) => racha.id !== this.featuredRacha?.id);
+  }
+
   loadPeladas(): void {
     this.loading = true;
     this.peladaService.listPeladas().subscribe({
@@ -283,5 +315,13 @@ export class PeladaListComponent implements OnInit {
 
   rachaTypeLabel(type: PeladaSummary['type']): string {
     return type === 'TOURNAMENT' ? 'Torneio' : 'Racha comum';
+  }
+
+  featuredRachaHeadline(racha: PeladaSummary | null): string {
+    if (!racha) {
+      return '';
+    }
+
+    return 'Este racha fica em destaque até ser concluído pelo ADM.';
   }
 }

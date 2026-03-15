@@ -581,6 +581,33 @@ export class PeladaDetailComponent implements OnInit {
     );
   }
 
+  hasMyCraqueVote(): boolean {
+    return Boolean(
+      this.craqueVoteSelections.firstUserId &&
+        this.craqueVoteSelections.secondUserId &&
+        this.craqueVoteSelections.thirdUserId
+    );
+  }
+
+  craqueVotePlayerName(userId: string): string {
+    const normalizedId = String(userId || '');
+    if (!normalizedId) {
+      return 'Jogador removido';
+    }
+
+    const card = this.ratingCards.find((item) => item.playerId === normalizedId);
+    if (card?.name) {
+      return toPlayerDisplayName(card.name);
+    }
+
+    const user = this.users.find((item) => item.id === normalizedId);
+    if (user?.name) {
+      return toPlayerDisplayName(user.name);
+    }
+
+    return 'Jogador removido';
+  }
+
   saveTeams(): void {
     if (!this.ensureNotConcluded()) {
       return;

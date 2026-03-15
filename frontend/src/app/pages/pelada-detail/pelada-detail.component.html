@@ -522,7 +522,8 @@
                         [value]="card.playerId"
                         [disabled]="isCraqueOptionDisabled(card.playerId, 'firstUserId')"
                       >
-                        {{ card.name | playerName }}
+                        <span class="craque-option-name">{{ card.name | playerName }}</span>
+                        <small class="craque-option-stats">{{ card.matchGoals }}G/{{ card.matchAssists }}A</small>
                       </mat-option>
                     }
                   </mat-select>
@@ -539,7 +540,8 @@
                         [value]="card.playerId"
                         [disabled]="isCraqueOptionDisabled(card.playerId, 'secondUserId')"
                       >
-                        {{ card.name | playerName }}
+                        <span class="craque-option-name">{{ card.name | playerName }}</span>
+                        <small class="craque-option-stats">{{ card.matchGoals }}G/{{ card.matchAssists }}A</small>
                       </mat-option>
                     }
                   </mat-select>
@@ -556,7 +558,8 @@
                         [value]="card.playerId"
                         [disabled]="isCraqueOptionDisabled(card.playerId, 'thirdUserId')"
                       >
-                        {{ card.name | playerName }}
+                        <span class="craque-option-name">{{ card.name | playerName }}</span>
+                        <small class="craque-option-stats">{{ card.matchGoals }}G/{{ card.matchAssists }}A</small>
                       </mat-option>
                     }
                   </mat-select>
@@ -571,6 +574,32 @@
               >
                 Salvar pódio de craque
               </button>
+            } @else if (pelada.votingStatus === 'FINISHED') {
+              @if (hasMyCraqueVote()) {
+                <div class="podium-list">
+                  <div class="podium-row">
+                    <span class="podium-position">1º</span>
+                    <div class="podium-content">
+                      <strong>{{ craqueVotePlayerName(craqueVoteSelections.firstUserId) }}</strong>
+                    </div>
+                  </div>
+                  <div class="podium-row">
+                    <span class="podium-position">2º</span>
+                    <div class="podium-content">
+                      <strong>{{ craqueVotePlayerName(craqueVoteSelections.secondUserId) }}</strong>
+                    </div>
+                  </div>
+                  <div class="podium-row">
+                    <span class="podium-position">3º</span>
+                    <div class="podium-content">
+                      <strong>{{ craqueVotePlayerName(craqueVoteSelections.thirdUserId) }}</strong>
+                    </div>
+                  </div>
+                </div>
+                <p class="muted">Seu voto foi encerrado e não pode mais ser alterado.</p>
+              } @else {
+                <p class="muted">Você não registrou voto de craque neste racha.</p>
+              }
             } @else {
               <p class="muted">A votação de craque estará disponível quando o ADM abrir as notas.</p>
             }
@@ -579,24 +608,28 @@
 
         <div class="panel craque-podium-box">
           <h3>Pódio dos Craques</h3>
-          <p class="muted">Total de votos de craque: {{ pelada.craquePodium.totalBallots }}</p>
-
-          @if (pelada.craquePodium.top3.length === 0) {
-            <p class="muted">Ainda não há votos suficientes para formar o pódio.</p>
+          @if (pelada.votingStatus !== 'FINISHED') {
+            <p class="muted">O pódio será exibido após o ADM encerrar a votação.</p>
           } @else {
-            <div class="podium-list">
-              @for (item of pelada.craquePodium.top3; track item.playerId) {
-                <div class="podium-row">
-                  <span class="podium-position">{{ item.position }}º</span>
-                  <div class="podium-content">
-                    <strong>{{ item.playerName | playerName }}</strong>
-                    <small class="muted">
-                      {{ item.points }} pts ({{ item.firstPlaces }}x 1º, {{ item.secondPlaces }}x 2º, {{ item.thirdPlaces }}x 3º)
-                    </small>
+            <p class="muted">Total de votos de craque: {{ pelada.craquePodium.totalBallots }}</p>
+
+            @if (pelada.craquePodium.top3.length === 0) {
+              <p class="muted">Não houve votos suficientes para formar o pódio.</p>
+            } @else {
+              <div class="podium-list">
+                @for (item of pelada.craquePodium.top3; track item.playerId) {
+                  <div class="podium-row">
+                    <span class="podium-position">{{ item.position }}º</span>
+                    <div class="podium-content">
+                      <strong>{{ item.playerName | playerName }}</strong>
+                      <small class="muted">
+                        {{ item.points }} pts ({{ item.firstPlaces }}x 1º, {{ item.secondPlaces }}x 2º, {{ item.thirdPlaces }}x 3º)
+                      </small>
+                    </div>
                   </div>
-                </div>
-              }
-            </div>
+                }
+              </div>
+            }
           }
         </div>
       </div>
@@ -640,7 +673,9 @@
                     <mat-chip>Assist.: {{ flowCard.matchAssists }}</mat-chip>
                     <mat-chip>{{ flowCard.matchWins }}V/{{ flowCard.matchDraws }}E/{{ flowCard.matchLosses }}D</mat-chip>
                   </mat-chip-set>
-                  <p class="muted">Nota média geral: {{ flowCard.ratingAverage | number : '1.1-2' }}</p>
+                  @if (authService.isAdmin) {
+                    <p class="muted">Nota média geral: {{ flowCard.ratingAverage | number : '1.1-2' }}</p>
+                  }
 
                   <div class="score-quick-grid">
                     @for (score of quickScoreOptions; track score) {
@@ -708,7 +743,9 @@
                   <mat-chip>Assist.: {{ card.matchAssists }}</mat-chip>
                   <mat-chip>{{ card.matchWins }}V/{{ card.matchDraws }}E/{{ card.matchLosses }}D</mat-chip>
                 </mat-chip-set>
-                <p class="muted">Nota média geral: {{ card.ratingAverage | number : '1.1-2' }}</p>
+                @if (authService.isAdmin) {
+                  <p class="muted">Nota média geral: {{ card.ratingAverage | number : '1.1-2' }}</p>
+                }
 
                 @if (card.alreadyRatedByMe) {
                   <span class="status-chip success">Você já votou neste jogador</span>

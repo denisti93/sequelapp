@@ -8,6 +8,7 @@ import {
   generateDoubleRoundRobinMatches,
   syncTeamResultsFromMatches
 } from '../utils/tournament.js';
+import { canRequesterSeeRatings } from '../utils/user-visibility.js';
 
 const CRAQUE_WEIGHTS = {
   firstUser: 5,
@@ -68,7 +69,7 @@ function ensureEditableRacha(pelada, reply) {
   return false;
 }
 
-function buildCraquePodium(craqueVotes = [], usersById = new Map()) {
+function computeCraqueRanking(craqueVotes = []) {
   const ranking = new Map();
 
   function ensurePlayerEntry(playerId) {
@@ -104,28 +105,92 @@ function buildCraquePodium(craqueVotes = [], usersById = new Map()) {
     third.thirdPlaces += 1;
   }
 
-  const top3 = Array.from(ranking.values())
-    .map((item) => ({
-      ...item,
-      playerName: usersById.get(item.playerId)?.name || 'Jogador removido'
-    }))
+  return Array.from(ranking.values())
     .sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
       if (b.firstPlaces !== a.firstPlaces) return b.firstPlaces - a.firstPlaces;
       if (b.secondPlaces !== a.secondPlaces) return b.secondPlaces - a.secondPlaces;
       if (b.thirdPlaces !== a.thirdPlaces) return b.thirdPlaces - a.thirdPlaces;
-      return a.playerName.localeCompare(b.playerName);
+      return a.playerId.localeCompare(b.playerId);
     })
-    .slice(0, 3)
+    .slice(0, 3);
+}
+
+function buildCraquePodiumFromRanking(ranking = [], usersById = new Map(), totalBallots = 0) {
+  const top3 = ranking
     .map((item, index) => ({
       position: index + 1,
-      ...item
-    }));
+      ...item,
+      playerName: usersById.get(item.playerId)?.name || 'Jogador removido'
+    }))
+    .sort((a, b) => {
+      if (a.position !== b.position) return a.position - b.position;
+      return a.playerName.localeCompare(b.playerName);
+    });
 
   return {
-    totalBallots: craqueVotes.length,
+    totalBallots,
     top3
   };
+}
+
+function buildCraqueResultSnapshot(craqueVotes = []) {
+  const ranking = computeCraqueRanking(craqueVotes);
+  return {
+    totalBallots: craqueVotes.length,
+    top3: ranking.map((item, index) => ({
+      position: index + 1,
+      player: item.playerId,
+      points: item.points,
+      firstPlaces: item.firstPlaces,
+      secondPlaces: item.secondPlaces,
+      thirdPlaces: item.thirdPlaces
+    }))
+  };
+}
+
+function buildCraquePodiumFromSavedResult(craqueResult = null, usersById = new Map()) {
+  if (!craqueResult || !Array.isArray(craqueResult.top3) || craqueResult.top3.length === 0) {
+    return {
+      totalBallots: 0,
+      top3: []
+    };
+  }
+
+  const ranking = craqueResult.top3.map((item) => ({
+    playerId: String(item.player),
+    points: Number(item.points || 0),
+    firstPlaces: Number(item.firstPlaces || 0),
+    secondPlaces: Number(item.secondPlaces || 0),
+    thirdPlaces: Number(item.thirdPlaces || 0)
+  }));
+
+  return buildCraquePodiumFromRanking(ranking, usersById, Number(craqueResult.totalBallots || 0));
+}
+
+function buildCraquePodiumForResponse(pelada, usersById = new Map()) {
+  if ((pelada.votingStatus || 'CLOSED') !== 'FINISHED') {
+    return {
+      totalBallots: 0,
+      top3: []
+    };
+  }
+
+  if (pelada.craqueResult?.top3?.length) {
+    return buildCraquePodiumFromSavedResult(pelada.craqueResult, usersById);
+  }
+
+  // Compatibilidade para peladas antigas sem snapshot salvo.
+  const ranking = computeCraqueRanking(pelada.craqueVotes || []);
+  return buildCraquePodiumFromRanking(ranking, usersById, (pelada.craqueVotes || []).length);
+}
+
+function refreshCraqueResultSnapshot(pelada) {
+  pelada.craqueResult = buildCraqueResultSnapshot(pelada.craqueVotes || []);
+}
+
+function clearCraqueResultSnapshot(pelada) {
+  pelada.craqueResult = null;
 }
 
 export async function peladaRoutes(fastify) {
@@ -167,6 +232,7 @@ export async function peladaRoutes(fastify) {
         playerStats: [],
         votes: [],
         craqueVotes: [],
+        craqueResult: null,
         votingStatus: 'CLOSED',
         status: 'OPEN'
       });
@@ -176,8 +242,13 @@ export async function peladaRoutes(fastify) {
   );
 
   fastify.get('/:id', { preHandler: [authenticate] }, async (request, reply) => {
+    const canSeeRatings = canRequesterSeeRatings(request.user);
+    const teamPlayerProjection = canSeeRatings
+      ? 'name username role ratingAverage position'
+      : 'name username role position';
+
     const pelada = await Pelada.findById(request.params.id)
-      .populate('teams.players', 'name username role ratingAverage position')
+      .populate('teams.players', teamPlayerProjection)
       .populate('playerStats.player', 'name username')
       .lean();
 
@@ -189,7 +260,7 @@ export async function peladaRoutes(fastify) {
     const participantIds = Array.from(participants);
     const users = await User.find({ _id: { $in: participantIds } }, 'name').lean();
     const usersById = new Map(users.map((user) => [String(user._id), user]));
-    const craquePodium = buildCraquePodium(pelada.craqueVotes || [], usersById);
+    const craquePodium = buildCraquePodiumForResponse(pelada, usersById);
     const isTournament = (pelada.type || 'NORMAL') === 'TOURNAMENT';
     const tournamentInfo = isTournament
       ? buildTournamentInfo(pelada.teams || [], pelada.tournamentMatches || [])
@@ -218,7 +289,7 @@ export async function peladaRoutes(fastify) {
           name: player.name,
           username: player.username,
           role: player.role,
-          ratingAverage: player.ratingAverage,
+          ...(canSeeRatings ? { ratingAverage: player.ratingAverage } : {}),
           position: player.position
         }))
       })),
@@ -289,6 +360,7 @@ export async function peladaRoutes(fastify) {
       pelada.playerStats = [];
       pelada.votes = [];
       pelada.craqueVotes = [];
+      clearCraqueResultSnapshot(pelada);
       pelada.votingStatus = 'CLOSED';
 
       if ((pelada.type || 'NORMAL') === 'TOURNAMENT') {
@@ -531,8 +603,13 @@ export async function peladaRoutes(fastify) {
           .send({ message: 'Cadastre os times da pelada antes de abrir votacao.' });
       }
 
+      const previousVotingStatus = pelada.votingStatus || 'CLOSED';
       pelada.votingStatus = 'OPEN';
+      clearCraqueResultSnapshot(pelada);
       await pelada.save();
+      if (previousVotingStatus === 'FINISHED') {
+        await recalculateAllUsersStats();
+      }
 
       return { message: 'Votacao aberta para esta pelada.' };
     }
@@ -553,7 +630,9 @@ export async function peladaRoutes(fastify) {
       }
 
       pelada.votingStatus = 'FINISHED';
+      refreshCraqueResultSnapshot(pelada);
       await pelada.save();
+      await recalculateAllUsersStats();
 
       return { message: 'Votacao finalizada para esta pelada.' };
     }
@@ -576,7 +655,9 @@ export async function peladaRoutes(fastify) {
 
       pelada.status = 'CONCLUDED';
       pelada.votingStatus = 'FINISHED';
+      refreshCraqueResultSnapshot(pelada);
       await pelada.save();
+      await recalculateAllUsersStats();
 
       return { message: 'Racha concluido com sucesso.' };
     }
@@ -708,7 +789,6 @@ export async function peladaRoutes(fastify) {
     }
 
     await pelada.save();
-    await recalculateAllUsersStats();
 
     return reply.code(201).send({ message: 'Podio de craque registrado com sucesso.' });
   });
@@ -796,6 +876,7 @@ export async function peladaRoutes(fastify) {
   );
 
   fastify.get('/:id/rating-cards', { preHandler: [authenticate] }, async (request, reply) => {
+    const canSeeRatings = canRequesterSeeRatings(request.user);
     const pelada = await Pelada.findById(request.params.id).lean();
     if (!pelada) {
       return reply.code(404).send({ message: 'Pelada nao encontrada.' });
@@ -806,7 +887,9 @@ export async function peladaRoutes(fastify) {
 
     const users = await User.find(
       { _id: { $in: participantIds } },
-      'name username ratingAverage totalGoals totalAssists totalWins totalDraws totalLosses'
+      canSeeRatings
+        ? 'name username ratingAverage totalGoals totalAssists totalWins totalDraws totalLosses'
+        : 'name username totalGoals totalAssists totalWins totalDraws totalLosses'
     ).lean();
 
     const usersById = new Map(users.map((user) => [String(user._id), user]));
@@ -845,7 +928,7 @@ export async function peladaRoutes(fastify) {
           playerId: participantId,
           name: user.name,
           username: user.username,
-          ratingAverage: user.ratingAverage,
+          ...(canSeeRatings ? { ratingAverage: user.ratingAverage } : {}),
           matchGoals: playerStats.goals,
           matchAssists: playerStats.assists,
           matchWins: teamResult.wins,

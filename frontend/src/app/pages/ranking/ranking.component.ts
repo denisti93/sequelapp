@@ -57,15 +57,14 @@ export class RankingComponent implements OnInit {
   users: User[] = [];
   searchTerm = '';
   podiumCategories: PodiumCategory[] = [];
-  readonly displayedColumns = [
+  private readonly baseDisplayedColumns = [
     'name',
     'totalGoals',
     'totalAssists',
     'totalTournamentTitles',
     'totalWins',
     'totalDraws',
-    'totalLosses',
-    'ratingAverage'
+    'totalLosses'
   ];
 
   readonly ratingForm = this.formBuilder.group({
@@ -82,6 +81,13 @@ export class RankingComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadUsers();
+  }
+
+  get displayedColumns(): string[] {
+    if (this.authService.isAdmin) {
+      return [...this.baseDisplayedColumns, 'ratingAverage'];
+    }
+    return this.baseDisplayedColumns;
   }
 
   loadUsers(): void {

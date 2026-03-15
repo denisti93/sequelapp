@@ -21,50 +21,47 @@
               <span class="status-chip position-chip">Posição: {{ playerPositionLabel(mySummary.position) }}</span>
             </div>
 
-            <div class="summary-highlight-grid">
-              <div class="metric-card highlight metric-goals">
+            <div class="summary-metrics-grid">
+              <div class="metric-card compact stat-card metric-goals">
                 <span class="metric-label">Gols</span>
                 <strong>{{ mySummary.totalGoals || 0 }}</strong>
               </div>
-              <div class="metric-card highlight metric-assists">
+              <div class="metric-card compact stat-card metric-assists">
                 <span class="metric-label">Assistências</span>
                 <strong>{{ mySummary.totalAssists || 0 }}</strong>
               </div>
-              <div class="metric-card highlight metric-wins">
+              <div class="metric-card compact stat-card metric-wins">
                 <span class="metric-label">Vitórias</span>
                 <strong>{{ mySummary.totalWins || 0 }}</strong>
               </div>
-            </div>
-
-            <div class="summary-secondary-grid">
-              <div class="metric-card compact">
+              <div class="metric-card compact stat-card">
                 <span class="metric-label">Empates</span>
                 <strong>{{ mySummary.totalDraws || 0 }}</strong>
               </div>
-              <div class="metric-card compact">
+              <div class="metric-card compact stat-card">
                 <span class="metric-label">Derrotas</span>
                 <strong>{{ mySummary.totalLosses || 0 }}</strong>
               </div>
+            </div>
 
-              <div class="metric-card wide metric-podium">
-                <div class="metric-podium-header">
-                  <span class="metric-label">Presenças no Top 3</span>
-                  <strong>{{ totalTop3Appearances(mySummary) }}</strong>
+            <div class="metric-card wide metric-podium">
+              <div class="metric-podium-header">
+                <span class="metric-label">Presenças no Top 3</span>
+                <strong>{{ totalTop3Appearances(mySummary) }}</strong>
+              </div>
+              <small class="muted">Total de vezes entre os três melhores do craque do racha.</small>
+              <div class="podium-rank-grid">
+                <div class="podium-rank-card first">
+                  <span class="podium-rank-label">1º lugar</span>
+                  <strong>{{ mySummary.totalCraqueFirstPlaces || 0 }}</strong>
                 </div>
-                <small class="muted">Total de vezes entre os três melhores do craque do racha.</small>
-                <div class="podium-rank-grid">
-                  <div class="podium-rank-card first">
-                    <span class="podium-rank-label">1º lugar</span>
-                    <strong>{{ mySummary.totalCraqueFirstPlaces || 0 }}</strong>
-                  </div>
-                  <div class="podium-rank-card second">
-                    <span class="podium-rank-label">2º lugar</span>
-                    <strong>{{ mySummary.totalCraqueSecondPlaces || 0 }}</strong>
-                  </div>
-                  <div class="podium-rank-card third">
-                    <span class="podium-rank-label">3º lugar</span>
-                    <strong>{{ mySummary.totalCraqueThirdPlaces || 0 }}</strong>
-                  </div>
+                <div class="podium-rank-card second">
+                  <span class="podium-rank-label">2º lugar</span>
+                  <strong>{{ mySummary.totalCraqueSecondPlaces || 0 }}</strong>
+                </div>
+                <div class="podium-rank-card third">
+                  <span class="podium-rank-label">3º lugar</span>
+                  <strong>{{ mySummary.totalCraqueThirdPlaces || 0 }}</strong>
                 </div>
               </div>
             </div>
@@ -192,6 +189,36 @@
     </section>
   }
 
+  @if (featuredRacha; as destaque) {
+    <section class="panel featured-racha-panel">
+      <h2 class="panel-title">Próximo racha</h2>
+
+      <article class="featured-racha-card">
+        <div class="featured-racha-header">
+          <span class="featured-badge">
+            <mat-icon>event_available</mat-icon>
+            Próximo racha em destaque
+          </span>
+          <span class="status-chip">{{ destaque.date | date : 'dd/MM/yyyy' : 'UTC' }}</span>
+        </div>
+
+        <p class="featured-racha-copy">{{ featuredRachaHeadline(destaque) }}</p>
+
+        <div class="mobile-chip-row">
+          <span class="status-chip type-chip" [class.tournament]="destaque.type === 'TOURNAMENT'">
+            {{ rachaTypeLabel(destaque.type) }}
+          </span>
+          <span class="status-chip racha-status-chip">{{ rachaStatusLabel(destaque.status) }}</span>
+          <span class="status-chip">{{ votingStatusLabel(destaque.votingStatus) }}</span>
+        </div>
+
+        <div class="featured-racha-actions">
+          <a mat-flat-button color="primary" [routerLink]="['/peladas', destaque.id]">Abrir detalhes</a>
+        </div>
+      </article>
+    </section>
+  }
+
   <section class="panel">
     <h2 class="panel-title">Histórico de rachas</h2>
 
@@ -200,7 +227,7 @@
     }
 
     <div class="table-wrap desktop-table">
-      <table mat-table [dataSource]="peladas" class="pelada-table">
+      <table mat-table [dataSource]="historicalPeladas" class="pelada-table">
         <ng-container matColumnDef="date">
           <th mat-header-cell *matHeaderCellDef>Data</th>
           <td mat-cell *matCellDef="let pelada">{{ pelada.date | date : 'dd/MM/yyyy' : 'UTC' }}</td>
@@ -218,9 +245,6 @@
         <ng-container matColumnDef="status">
           <th mat-header-cell *matHeaderCellDef>Status</th>
           <td mat-cell *matCellDef="let pelada">
-            <span class="status-chip" [class.success]="pelada.happened">
-              {{ pelada.happened ? 'Aconteceu' : 'Vai acontecer' }}
-            </span>
             <span class="status-chip racha-status-chip">
               {{ rachaStatusLabel(pelada.status) }}
             </span>
@@ -245,15 +269,12 @@
     </div>
 
     <div class="mobile-racha-list">
-      @for (pelada of peladas; track pelada.id) {
+      @for (pelada of historicalPeladas; track pelada.id) {
         <article class="mobile-racha-card">
           <h3>{{ pelada.date | date : 'dd/MM/yyyy' : 'UTC' }}</h3>
           <div class="mobile-chip-row">
             <span class="status-chip type-chip" [class.tournament]="pelada.type === 'TOURNAMENT'">
               {{ rachaTypeLabel(pelada.type) }}
-            </span>
-            <span class="status-chip" [class.success]="pelada.happened">
-              {{ pelada.happened ? 'Aconteceu' : 'Vai acontecer' }}
             </span>
             <span class="status-chip racha-status-chip">{{ rachaStatusLabel(pelada.status) }}</span>
             <span class="status-chip">{{ votingStatusLabel(pelada.votingStatus) }}</span>

@@ -144,15 +144,10 @@
   font-weight: 700;
 }
 
-.summary-highlight-grid {
+.summary-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.summary-secondary-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(96px, 128px));
+  justify-content: flex-start;
   gap: 10px;
 }
 
@@ -177,6 +172,25 @@
 
 .metric-card.compact strong {
   font-size: 1.1rem;
+}
+
+.metric-card.stat-card {
+  padding: 10px;
+  min-height: 88px;
+  place-content: center;
+  text-align: center;
+  gap: 6px;
+  background: linear-gradient(160deg, #fff7fd, #ffeede);
+}
+
+.metric-card.stat-card strong {
+  font-size: 1.32rem;
+  line-height: 1;
+}
+
+.metric-card.stat-card .metric-label {
+  font-size: 0.74rem;
+  line-height: 1.15;
 }
 
 .metric-goals strong {
@@ -298,7 +312,6 @@
 }
 
 .racha-status-chip {
-  margin-left: 8px;
   background: linear-gradient(90deg, #ffe4cf, #ffd8bb);
   color: #c2410c;
 }
@@ -336,6 +349,57 @@
   gap: 6px;
 }
 
+.featured-racha-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.featured-racha-card {
+  border: 1px solid #f97316;
+  border-radius: 14px;
+  padding: 12px;
+  background: linear-gradient(135deg, #fff0e2, #f3e8ff);
+  display: grid;
+  gap: 10px;
+}
+
+.featured-racha-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.featured-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f97316, #7c3aed);
+  color: #fff7ed;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.featured-badge mat-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+}
+
+.featured-racha-copy {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #5b21b6;
+}
+
+.featured-racha-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
 @media (max-width: 960px) {
   .admin-overview-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -349,8 +413,8 @@
     grid-template-columns: 1fr;
   }
 
-  .summary-highlight-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .summary-metrics-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 
@@ -368,9 +432,8 @@
     width: 100%;
   }
 
-  .summary-highlight-grid,
-  .summary-secondary-grid {
-    grid-template-columns: 1fr;
+  .summary-metrics-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .podium-rank-grid {
@@ -387,5 +450,15 @@
 
   .mobile-racha-list {
     display: grid;
+  }
+
+  .featured-racha-actions a {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .summary-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

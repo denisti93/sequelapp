@@ -10,8 +10,8 @@ export interface User {
   position?: PlayerPosition;
   approvalStatus?: ApprovalStatus;
   createdAt?: string;
-  initialRating: number;
-  ratingAverage: number;
+  initialRating?: number | null;
+  ratingAverage?: number | null;
   totalGoals: number;
   totalAssists: number;
   totalWins: number;
