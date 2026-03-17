@@ -331,6 +331,21 @@
     0 1px 0 rgba(255, 255, 255, 0.35),
     0 2px 5px rgba(0, 0, 0, 0.35);
   user-select: none;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.button-player img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.button-player .mat-icon {
+  width: 13px;
+  height: 13px;
+  font-size: 13px;
+  color: #ffffff;
 }
 
 .button-player.guest {
@@ -533,6 +548,10 @@
   margin-bottom: 12px;
 }
 
+.player-final-rating {
+  margin-bottom: 10px;
+}
+
 .craque-layout {
   display: grid;
   grid-template-columns: 1.3fr 1fr;
@@ -641,6 +660,31 @@
   border-radius: 14px;
   border-top: 3px solid #f97316;
   background: linear-gradient(180deg, #ffffff 0%, #fff5ec 100%);
+}
+
+.rating-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #e6d1fd;
+  background: linear-gradient(145deg, #f6ebff, #ffe9da);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.rating-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rating-avatar .mat-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+  color: #7c3aed;
 }
 
 .rating-flow-card {

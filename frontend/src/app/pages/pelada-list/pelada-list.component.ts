@@ -15,7 +15,7 @@ import { PeladaSummary } from '../../models/pelada';
 import { AuthService } from '../../core/services/auth.service';
 import { PeladaService } from '../../core/services/pelada.service';
 import { UserService } from '../../core/services/user.service';
-import { PendingApprovalUser, PlayerPosition, User } from '../../models/user';
+import { PendingApprovalUser } from '../../models/user';
 import { PlayerNamePipe } from '../../shared/pipes/player-name.pipe';
 
 @Component({
@@ -41,26 +41,14 @@ import { PlayerNamePipe } from '../../shared/pipes/player-name.pipe';
 })
 export class PeladaListComponent implements OnInit {
   loading = false;
-  summaryLoading = false;
-  positionLoading = false;
   peladas: PeladaSummary[] = [];
   pendingUsers: PendingApprovalUser[] = [];
   approvingUserId: string | null = null;
   readonly displayedColumns = ['date', 'type', 'status', 'votingStatus', 'actions'];
-  mySummary: User | null = null;
-  readonly playerPositionOptions: Array<{ value: PlayerPosition; label: string }> = [
-    { value: 'ZAGUEIRO', label: 'Zagueiro' },
-    { value: 'MEIA', label: 'Meia' },
-    { value: 'ATACANTE', label: 'Atacante' }
-  ];
 
   readonly createForm = this.formBuilder.group({
     date: ['', Validators.required],
     type: ['NORMAL', Validators.required]
-  });
-
-  readonly positionForm = this.formBuilder.group({
-    position: ['', Validators.required]
   });
 
   constructor(
@@ -75,8 +63,6 @@ export class PeladaListComponent implements OnInit {
     this.loadPeladas();
     if (this.authService.isAdmin) {
       this.loadPendingUsers();
-    } else {
-      this.loadMySummary();
     }
   }
 
@@ -162,28 +148,6 @@ export class PeladaListComponent implements OnInit {
     });
   }
 
-  loadMySummary(): void {
-    this.summaryLoading = true;
-    this.userService.getMe().subscribe({
-      next: (user) => {
-        this.mySummary = user;
-        this.positionForm.patchValue(
-          {
-            position: user.position || ''
-          },
-          { emitEvent: false }
-        );
-        if (this.authService.currentUser?.id === user.id) {
-          this.authService.syncCurrentUser(user);
-        }
-        this.summaryLoading = false;
-      },
-      error: () => {
-        this.summaryLoading = false;
-      }
-    });
-  }
-
   loadPendingUsers(): void {
     if (!this.authService.isAdmin) {
       return;
@@ -222,69 +186,6 @@ export class PeladaListComponent implements OnInit {
         });
       }
     });
-  }
-
-  saveMyPosition(): void {
-    if (this.positionForm.invalid || this.positionLoading || this.summaryLoading || this.authService.isAdmin) {
-      this.positionForm.markAllAsTouched();
-      return;
-    }
-
-    const { position } = this.positionForm.getRawValue();
-    if (!position) {
-      return;
-    }
-
-    this.positionLoading = true;
-    this.userService.updateMyPosition(position as PlayerPosition).subscribe({
-      next: (response) => {
-        this.positionLoading = false;
-        this.mySummary = response.user;
-        this.positionForm.patchValue(
-          {
-            position: response.user.position || ''
-          },
-          { emitEvent: false }
-        );
-        this.authService.syncCurrentUser(response.user);
-        this.snackBar.open(response.message || 'Posição atualizada com sucesso.', 'Fechar', {
-          duration: 2600
-        });
-      },
-      error: (error) => {
-        this.positionLoading = false;
-        this.snackBar.open(error?.error?.message || 'Falha ao atualizar posição.', 'Fechar', {
-          duration: 3000
-        });
-      }
-    });
-  }
-
-  playerPositionLabel(position?: PlayerPosition): string {
-    if (position === 'ZAGUEIRO') return 'Zagueiro';
-    if (position === 'MEIA') return 'Meia';
-    if (position === 'ATACANTE') return 'Atacante';
-    return 'Não definida';
-  }
-
-  totalMatches(summary: User | null): number {
-    if (!summary) {
-      return 0;
-    }
-
-    return Number(summary.totalWins || 0) + Number(summary.totalDraws || 0) + Number(summary.totalLosses || 0);
-  }
-
-  totalTop3Appearances(summary: User | null): number {
-    if (!summary) {
-      return 0;
-    }
-
-    return (
-      Number(summary.totalCraqueFirstPlaces || 0) +
-      Number(summary.totalCraqueSecondPlaces || 0) +
-      Number(summary.totalCraqueThirdPlaces || 0)
-    );
   }
 
   totalRachasCount(): number {

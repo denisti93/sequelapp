@@ -54,7 +54,12 @@ export class LoginComponent {
     this.authService.login(username ?? '', password ?? '').subscribe({
       next: () => {
         this.loading = false;
-        this.router.navigate(['/peladas']);
+        if (this.authService.isAdmin) {
+          this.router.navigate(['/peladas']);
+          return;
+        }
+
+        this.router.navigate(['/perfil']);
       },
       error: (error) => {
         this.loading = false;

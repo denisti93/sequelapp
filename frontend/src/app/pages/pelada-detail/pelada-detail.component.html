@@ -63,7 +63,13 @@
                     <div class="pitch-buttons">
                       @for (player of layout.attack; track player.id) {
                         <span class="field-player" [attr.title]="player.name">
-                          <span class="button-player" [class.guest]="player.isGuest"></span>
+                          <span class="button-player" [class.guest]="player.isGuest">
+                            @if (player.profileImageUrl) {
+                              <img [src]="player.profileImageUrl" alt="Foto de {{ player.name | playerName }}" />
+                            } @else {
+                              <mat-icon>person</mat-icon>
+                            }
+                          </span>
                           <small class="field-player-name">{{ playerShortName(player.name) }}</small>
                           @if (player.isGuest) {
                             <small class="field-player-tag">Convidado</small>
@@ -77,7 +83,13 @@
                     <div class="pitch-buttons">
                       @for (player of layout.midfield; track player.id) {
                         <span class="field-player" [attr.title]="player.name">
-                          <span class="button-player" [class.guest]="player.isGuest"></span>
+                          <span class="button-player" [class.guest]="player.isGuest">
+                            @if (player.profileImageUrl) {
+                              <img [src]="player.profileImageUrl" alt="Foto de {{ player.name | playerName }}" />
+                            } @else {
+                              <mat-icon>person</mat-icon>
+                            }
+                          </span>
                           <small class="field-player-name">{{ playerShortName(player.name) }}</small>
                           @if (player.isGuest) {
                             <small class="field-player-tag">Convidado</small>
@@ -91,7 +103,13 @@
                     <div class="pitch-buttons">
                       @for (player of layout.defense; track player.id) {
                         <span class="field-player" [attr.title]="player.name">
-                          <span class="button-player" [class.guest]="player.isGuest"></span>
+                          <span class="button-player" [class.guest]="player.isGuest">
+                            @if (player.profileImageUrl) {
+                              <img [src]="player.profileImageUrl" alt="Foto de {{ player.name | playerName }}" />
+                            } @else {
+                              <mat-icon>person</mat-icon>
+                            }
+                          </span>
                           <small class="field-player-name">{{ playerShortName(player.name) }}</small>
                           @if (player.isGuest) {
                             <small class="field-player-tag">Convidado</small>
@@ -505,6 +523,16 @@
         <p class="muted">Racha concluído: ajustes e novas notas estão bloqueados.</p>
       }
 
+      @if (pelada.votingStatus === 'FINISHED' && isCurrentUserParticipantInRacha) {
+        <div class="player-final-rating">
+          @if (myMatchRating !== null) {
+            <span class="status-chip">Sua nota final no racha: {{ myMatchRating | number : '1.1-2' }}</span>
+          } @else {
+            <span class="status-chip">Sua nota final no racha: sem votos recebidos</span>
+          }
+        </div>
+      }
+
       <div class="craque-layout" [class.admin-only-podium]="authService.isAdmin">
         @if (!authService.isAdmin) {
           <div class="panel craque-vote-box">
@@ -663,6 +691,13 @@
                 [class.swipe-left]="ratingFlowAnimating && ratingFlowSwipeDirection === 'left'"
               >
                 <mat-card-header>
+                  <div mat-card-avatar class="rating-avatar">
+                    @if (flowCard.profileImageUrl) {
+                      <img [src]="flowCard.profileImageUrl" alt="Foto de {{ flowCard.name | playerName }}" />
+                    } @else {
+                      <mat-icon>person</mat-icon>
+                    }
+                  </div>
                   <mat-card-title>{{ flowCard.name | playerName }}</mat-card-title>
                   <mat-card-subtitle>&#64;{{ flowCard.username }}</mat-card-subtitle>
                 </mat-card-header>
@@ -733,6 +768,13 @@
           @for (card of ratingCards; track card.playerId) {
             <mat-card class="rating-card">
               <mat-card-header>
+                <div mat-card-avatar class="rating-avatar">
+                  @if (card.profileImageUrl) {
+                    <img [src]="card.profileImageUrl" alt="Foto de {{ card.name | playerName }}" />
+                  } @else {
+                    <mat-icon>person</mat-icon>
+                  }
+                </div>
                 <mat-card-title>{{ card.name | playerName }}</mat-card-title>
                 <mat-card-subtitle>&#64;{{ card.username }}</mat-card-subtitle>
               </mat-card-header>

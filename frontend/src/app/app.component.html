@@ -18,9 +18,15 @@
       <a mat-button routerLink="/ranking" routerLinkActive="active-link">Ranking</a>
     </nav>
 
-    <span class="user-pill desktop-only">
-      {{ authService.currentUser?.name | playerName }} ({{ authService.currentUser?.role }})
-    </span>
+    @if (authService.currentUser?.role === 'JOGADOR') {
+      <a mat-button class="user-pill user-pill-link desktop-only" routerLink="/perfil">
+        {{ authService.currentUser?.name | playerName }} ({{ authService.currentUser?.role }})
+      </a>
+    } @else {
+      <span class="user-pill desktop-only">
+        {{ authService.currentUser?.name | playerName }} ({{ authService.currentUser?.role }})
+      </span>
+    }
 
     <button mat-stroked-button color="accent" class="desktop-only" (click)="logout()">
       <mat-icon>logout</mat-icon>
@@ -45,10 +51,17 @@
         <mat-icon>leaderboard</mat-icon>
         <span>Ranking</span>
       </button>
-      <button mat-menu-item disabled class="mobile-user-item">
-        <mat-icon>person</mat-icon>
-        <span>{{ authService.currentUser?.name | playerName }} ({{ authService.currentUser?.role }})</span>
-      </button>
+      @if (authService.currentUser?.role === 'JOGADOR') {
+        <button mat-menu-item routerLink="/perfil">
+          <mat-icon>person</mat-icon>
+          <span>{{ authService.currentUser?.name | playerName }} ({{ authService.currentUser?.role }})</span>
+        </button>
+      } @else {
+        <button mat-menu-item disabled class="mobile-user-item">
+          <mat-icon>person</mat-icon>
+          <span>{{ authService.currentUser?.name | playerName }} ({{ authService.currentUser?.role }})</span>
+        </button>
+      }
       <button mat-menu-item (click)="logout()">
         <mat-icon>logout</mat-icon>
         <span>Sair</span>

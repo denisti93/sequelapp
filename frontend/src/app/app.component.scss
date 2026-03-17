@@ -80,6 +80,10 @@
   font-size: 12px;
 }
 
+.user-pill-link {
+  text-decoration: none;
+}
+
 @media (max-width: 800px) {
   .topbar {
     flex-wrap: nowrap;

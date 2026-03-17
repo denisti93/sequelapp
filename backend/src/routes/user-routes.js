@@ -2,6 +2,10 @@ import { authenticate, authorize } from '../middleware/auth.js';
 import { User } from '../models/User.js';
 import { recalculateAllUsersStats } from '../services/stats-service.js';
 import {
+  removeProfileImageByPublicPath,
+  saveProfileImageFromDataUrl
+} from '../utils/profile-image.js';
+import {
   canRequesterSeeRatings,
   sanitizeUserPayloadForRole
 } from '../utils/user-visibility.js';
@@ -13,7 +17,9 @@ export async function userRoutes(fastify) {
       return { message: 'Usuario nao encontrado.' };
     }
 
-    return sanitizeUserPayloadForRole(user.toJSON(), request.user.role);
+    return sanitizeUserPayloadForRole(user.toJSON(), request.user.role, {
+      includeOwnRatings: true
+    });
   });
 
   fastify.patch('/me/position', { preHandler: [authenticate] }, async (request, reply) => {
@@ -43,7 +49,60 @@ export async function userRoutes(fastify) {
 
     return {
       message: 'Posicao atualizada com sucesso.',
-      user: sanitizeUserPayloadForRole(user.toJSON(), request.user.role)
+      user: sanitizeUserPayloadForRole(user.toJSON(), request.user.role, {
+        includeOwnRatings: true
+      })
+    };
+  });
+
+  fastify.patch('/me/profile', { preHandler: [authenticate] }, async (request, reply) => {
+    const { name, lastName, profileImageDataUrl } = request.body || {};
+
+    const normalizedName = String(name || '')
+      .trim()
+      .replace(/\s+/g, ' ');
+    const normalizedLastName = String(lastName || '')
+      .trim()
+      .replace(/\s+/g, ' ');
+
+    if (!normalizedName || !normalizedLastName) {
+      return reply.code(400).send({ message: 'Informe nome e sobrenome.' });
+    }
+
+    const user = await User.findById(request.user.id);
+    if (!user) {
+      return reply.code(404).send({ message: 'Usuario nao encontrado.' });
+    }
+
+    let nextProfileImageUrl = user.profileImageUrl || null;
+    const currentProfileImageUrl = user.profileImageUrl || null;
+
+    try {
+      if (profileImageDataUrl !== undefined) {
+        if (profileImageDataUrl === null || String(profileImageDataUrl).trim() === '') {
+          await removeProfileImageByPublicPath(currentProfileImageUrl);
+          nextProfileImageUrl = null;
+        } else if (typeof profileImageDataUrl === 'string') {
+          const uploadedImageUrl = await saveProfileImageFromDataUrl(user._id, profileImageDataUrl);
+          await removeProfileImageByPublicPath(currentProfileImageUrl);
+          nextProfileImageUrl = uploadedImageUrl;
+        } else {
+          return reply.code(400).send({ message: 'Formato de imagem de perfil invalido.' });
+        }
+      }
+    } catch (error) {
+      return reply.code(400).send({ message: error.message || 'Falha ao processar imagem de perfil.' });
+    }
+
+    user.name = `${normalizedName} ${normalizedLastName}`.trim();
+    user.profileImageUrl = nextProfileImageUrl || undefined;
+    await user.save();
+
+    return {
+      message: 'Perfil atualizado com sucesso.',
+      user: sanitizeUserPayloadForRole(user.toJSON(), request.user.role, {
+        includeOwnRatings: true
+      })
     };
   });
 
@@ -92,6 +151,7 @@ export async function userRoutes(fastify) {
       name: user.name,
       username: user.username,
       role: user.role,
+      profileImageUrl: user.profileImageUrl,
       position: user.position,
       approvalStatus: user.approvalStatus || 'APPROVED',
       ...(canSeeRatings ? { ratingAverage: user.ratingAverage } : {}),

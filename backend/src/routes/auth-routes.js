@@ -82,7 +82,9 @@ export async function authRoutes(fastify) {
     const token = issueToken(fastify, user);
     return {
       token,
-      user: sanitizeUserPayloadForRole(user.toJSON(), user.role)
+      user: sanitizeUserPayloadForRole(user.toJSON(), user.role, {
+        includeOwnRatings: true
+      })
     };
   });
 }

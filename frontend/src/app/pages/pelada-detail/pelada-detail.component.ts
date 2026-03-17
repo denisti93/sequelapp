@@ -23,6 +23,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { PeladaService } from '../../core/services/pelada.service';
 import { UserService } from '../../core/services/user.service';
 import { PlayerNamePipe } from '../../shared/pipes/player-name.pipe';
+import { toAbsoluteProfileImageUrl } from '../../shared/utils/profile-image';
 import { toPlayerDisplayName } from '../../shared/utils/player-name';
 import {
   CraqueVoteSelection,
@@ -40,6 +41,7 @@ type FieldLine = 'DEFENSE' | 'MIDFIELD' | 'ATTACK';
 interface TeamFieldPlayer {
   id: string;
   name: string;
+  profileImageUrl?: string | null;
   position?: PlayerPosition;
   isGuest: boolean;
 }
@@ -91,6 +93,7 @@ export class PeladaDetailComponent implements OnInit {
   actionLoading = false;
 
   ratingCards: RatingCard[] = [];
+  myMatchRating: number | null = null;
   canCurrentUserVote = false;
   canCurrentUserVoteCraque = false;
   voteSelections: Record<string, number> = {};
@@ -210,6 +213,15 @@ export class PeladaDetailComponent implements OnInit {
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
+  get isCurrentUserParticipantInRacha(): boolean {
+    const currentUserId = String(this.authService.currentUser?.id || '');
+    if (!currentUserId) {
+      return false;
+    }
+
+    return this.ratingCards.some((card) => card.playerId === currentUserId);
+  }
+
   ngOnInit(): void {
     this.peladaId = this.route.snapshot.paramMap.get('id') || '';
     if (!this.peladaId) {
@@ -233,7 +245,7 @@ export class PeladaDetailComponent implements OnInit {
       votes: this.authService.isAdmin ? this.peladaService.getVoteDetails(this.peladaId) : of(null)
     }).subscribe({
       next: ({ pelada, users, rating, votes }) => {
-        this.pelada = pelada;
+        this.pelada = this.normalizePeladaPlayerImages(pelada);
         this.users = users;
 
         this.buildTeamForm(pelada);
@@ -490,10 +502,17 @@ export class PeladaDetailComponent implements OnInit {
   }
 
   private applyRatingCards(rating: RatingCardsResponse): void {
-    this.ratingCards = rating.cards;
+    this.ratingCards = rating.cards.map((card) => ({
+      ...card,
+      profileImageUrl: toAbsoluteProfileImageUrl(card.profileImageUrl)
+    }));
+    this.myMatchRating =
+      typeof rating.myMatchRating === 'number' && Number.isFinite(rating.myMatchRating)
+        ? rating.myMatchRating
+        : null;
     this.canCurrentUserVote = rating.canCurrentUserVote;
     this.canCurrentUserVoteCraque = rating.canCurrentUserVoteCraque;
-    this.ratingFlowQueue = rating.cards.filter((card) => card.canVote);
+    this.ratingFlowQueue = this.ratingCards.filter((card) => card.canVote);
     this.ratingFlowSelectedScore = null;
     this.ratingFlowAnimating = false;
     this.ratingFlowSwipeDirection = null;
@@ -1183,6 +1202,7 @@ export class PeladaDetailComponent implements OnInit {
     const registeredPlayers: TeamFieldPlayer[] = (team.players || []).map((player) => ({
       id: player.id,
       name: player.name,
+      profileImageUrl: player.profileImageUrl || null,
       position: player.position,
       isGuest: false
     }));
@@ -1323,5 +1343,18 @@ export class PeladaDetailComponent implements OnInit {
     if (position === 'MEIA') return 'Meia';
     if (position === 'ATACANTE') return 'Atacante';
     return '-';
+  }
+
+  private normalizePeladaPlayerImages(pelada: PeladaDetail): PeladaDetail {
+    return {
+      ...pelada,
+      teams: (pelada.teams || []).map((team) => ({
+        ...team,
+        players: (team.players || []).map((player) => ({
+          ...player,
+          profileImageUrl: toAbsoluteProfileImageUrl(player.profileImageUrl)
+        }))
+      }))
+    };
   }
 }

@@ -13,13 +13,16 @@ import { AuthService } from '../../core/services/auth.service';
 import { UserService } from '../../core/services/user.service';
 import { User } from '../../models/user';
 import { PlayerNamePipe } from '../../shared/pipes/player-name.pipe';
+import { toAbsoluteProfileImageUrl } from '../../shared/utils/profile-image';
 
 type PodiumMetric = 'goals' | 'assists' | 'titles';
 
 interface PodiumEntry {
   rank: 1 | 2 | 3;
+  userId: string;
   userName: string;
   username: string;
+  profileImageUrl: string | null;
   value: number;
 }
 
@@ -231,8 +234,10 @@ export class RankingComponent implements OnInit {
 
     return sorted.map((user, index) => ({
       rank: (index + 1) as 1 | 2 | 3,
+      userId: user.id,
       userName: user.name,
       username: user.username,
+      profileImageUrl: toAbsoluteProfileImageUrl(user.profileImageUrl),
       value: metricValue(user)
     }));
   }

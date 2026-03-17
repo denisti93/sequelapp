@@ -6,8 +6,10 @@ export function canRequesterSeeRatings(requestUser) {
   return canSeeRatingsForRole(requestUser?.role);
 }
 
-export function sanitizeUserPayloadForRole(userPayload, role) {
-  if (!userPayload || canSeeRatingsForRole(role)) {
+export function sanitizeUserPayloadForRole(userPayload, role, options = {}) {
+  const includeOwnRatings = Boolean(options?.includeOwnRatings);
+
+  if (!userPayload || canSeeRatingsForRole(role) || includeOwnRatings) {
     return userPayload;
   }
 

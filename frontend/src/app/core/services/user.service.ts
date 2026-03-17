@@ -37,4 +37,12 @@ export class UserService {
       position
     });
   }
+
+  updateMyProfile(payload: {
+    name: string;
+    lastName: string;
+    profileImageDataUrl?: string | null;
+  }): Observable<{ message: string; user: User }> {
+    return this.http.patch<{ message: string; user: User }>(`${this.apiUrl}/users/me/profile`, payload);
+  }
 }

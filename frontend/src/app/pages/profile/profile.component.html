@@ -1,0 +1,175 @@
+<div class="page-container page-grid">
+  @if (!isPlayer) {
+    <section class="panel">
+      <h2 class="panel-title">Meu perfil</h2>
+      <p class="muted">Esta aba está disponível apenas para jogadores.</p>
+    </section>
+  } @else {
+    @if (loading) {
+      <section class="panel">
+        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+      </section>
+    } @else if (currentUser) {
+      <section class="panel summary-panel">
+        <div class="summary-panel-header">
+          <div>
+            <h2 class="panel-title">Meu resumo geral</h2>
+            <p class="muted">Visão consolidada de desempenho em todos os rachas.</p>
+          </div>
+          <span class="status-chip summary-total-chip">{{ totalMatches(currentUser) }} jogo(s)</span>
+        </div>
+
+        <div class="summary-main">
+          <div class="summary-player-row">
+            <h3 class="summary-player-name">{{ currentUser.name | playerName }}</h3>
+            <span class="status-chip position-chip">Posição: {{ playerPositionLabel(currentUser.position) }}</span>
+          </div>
+
+          <div class="summary-metrics-grid">
+            <div class="metric-card compact stat-card metric-rating">
+              <span class="metric-label">Minha nota média</span>
+              <strong>{{ currentUser.ratingAverage | number : '1.1-2' }}</strong>
+            </div>
+            <div class="metric-card compact stat-card metric-goals">
+              <span class="metric-label">Gols</span>
+              <strong>{{ currentUser.totalGoals || 0 }}</strong>
+            </div>
+            <div class="metric-card compact stat-card metric-assists">
+              <span class="metric-label">Assistências</span>
+              <strong>{{ currentUser.totalAssists || 0 }}</strong>
+            </div>
+            <div class="metric-card compact stat-card metric-wins">
+              <span class="metric-label">Vitórias</span>
+              <strong>{{ currentUser.totalWins || 0 }}</strong>
+            </div>
+            <div class="metric-card compact stat-card">
+              <span class="metric-label">Empates</span>
+              <strong>{{ currentUser.totalDraws || 0 }}</strong>
+            </div>
+            <div class="metric-card compact stat-card">
+              <span class="metric-label">Derrotas</span>
+              <strong>{{ currentUser.totalLosses || 0 }}</strong>
+            </div>
+          </div>
+
+          <div class="metric-card wide metric-podium">
+            <div class="metric-podium-header">
+              <span class="metric-label">Presenças no Top 3</span>
+              <strong>{{ totalTop3Appearances(currentUser) }}</strong>
+            </div>
+            <small class="muted">Total de vezes entre os três melhores do craque do racha.</small>
+            <div class="podium-rank-grid">
+              <div class="podium-rank-card first">
+                <span class="podium-rank-label">1º lugar</span>
+                <strong>{{ currentUser.totalCraqueFirstPlaces || 0 }}</strong>
+              </div>
+              <div class="podium-rank-card second">
+                <span class="podium-rank-label">2º lugar</span>
+                <strong>{{ currentUser.totalCraqueSecondPlaces || 0 }}</strong>
+              </div>
+              <div class="podium-rank-card third">
+                <span class="podium-rank-label">3º lugar</span>
+                <strong>{{ currentUser.totalCraqueThirdPlaces || 0 }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel profile-panel">
+        <div class="profile-panel-header">
+          <div>
+            <h2 class="panel-title">Editar perfil</h2>
+            <p class="muted">Atualize seus dados e sua posição principal em campo.</p>
+          </div>
+        </div>
+
+        <div class="profile-layout">
+          <article class="profile-card">
+            <div class="profile-photo-area">
+              @if (profileImagePreviewUrl) {
+                <img class="profile-photo-preview" [src]="profileImagePreviewUrl" alt="Foto de perfil do jogador" />
+              } @else {
+                <div class="profile-photo-placeholder">
+                  <mat-icon>person</mat-icon>
+                </div>
+              }
+
+              <div class="profile-photo-actions">
+                <input
+                  #profileImageInput
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  hidden
+                  (change)="onProfileImageSelected($event)"
+                />
+                <button
+                  mat-stroked-button
+                  type="button"
+                  color="primary"
+                  (click)="profileImageInput.click()"
+                  [disabled]="loading || profileLoading"
+                >
+                  Trocar foto
+                </button>
+                <button
+                  mat-button
+                  type="button"
+                  (click)="clearProfileImage()"
+                  [disabled]="loading || profileLoading || !hasProfileImage()"
+                >
+                  Remover foto
+                </button>
+              </div>
+            </div>
+            <form [formGroup]="profileForm" class="profile-form" (ngSubmit)="saveProfile()">
+              <mat-form-field appearance="outline">
+                <mat-label>Nome</mat-label>
+                <input matInput formControlName="name" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Sobrenome</mat-label>
+                <input matInput formControlName="lastName" />
+              </mat-form-field>
+
+              <button mat-flat-button color="primary" type="submit" [disabled]="loading || profileLoading || profileForm.invalid">
+                Salvar perfil
+              </button>
+            </form>
+          </article>
+
+          <article class="profile-card">
+            <h3>Perfil em campo</h3>
+            <p class="muted">Defina sua posição para ajudar na formação dos times.</p>
+
+            <form [formGroup]="positionForm" class="profile-form" (ngSubmit)="savePosition()">
+              <mat-form-field appearance="outline">
+                <mat-label>Minha posição</mat-label>
+                <mat-select formControlName="position">
+                  @for (option of playerPositionOptions; track option.value) {
+                    <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <button
+                mat-flat-button
+                color="primary"
+                type="submit"
+                [disabled]="loading || positionLoading || positionForm.invalid"
+              >
+                Salvar posição
+              </button>
+            </form>
+          </article>
+        </div>
+      </section>
+    } @else {
+      <section class="panel">
+        <h2 class="panel-title">Meu perfil</h2>
+        <p class="muted">Não foi possível carregar seu perfil.</p>
+      </section>
+    }
+  }
+</div>

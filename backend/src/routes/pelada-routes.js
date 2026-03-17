@@ -244,8 +244,8 @@ export async function peladaRoutes(fastify) {
   fastify.get('/:id', { preHandler: [authenticate] }, async (request, reply) => {
     const canSeeRatings = canRequesterSeeRatings(request.user);
     const teamPlayerProjection = canSeeRatings
-      ? 'name username role ratingAverage position'
-      : 'name username role position';
+      ? 'name username role ratingAverage position profileImageUrl'
+      : 'name username role position profileImageUrl';
 
     const pelada = await Pelada.findById(request.params.id)
       .populate('teams.players', teamPlayerProjection)
@@ -289,6 +289,7 @@ export async function peladaRoutes(fastify) {
           name: player.name,
           username: player.username,
           role: player.role,
+          profileImageUrl: player.profileImageUrl || null,
           ...(canSeeRatings ? { ratingAverage: player.ratingAverage } : {}),
           position: player.position
         }))
@@ -888,8 +889,8 @@ export async function peladaRoutes(fastify) {
     const users = await User.find(
       { _id: { $in: participantIds } },
       canSeeRatings
-        ? 'name username ratingAverage totalGoals totalAssists totalWins totalDraws totalLosses'
-        : 'name username totalGoals totalAssists totalWins totalDraws totalLosses'
+        ? 'name username profileImageUrl ratingAverage totalGoals totalAssists totalWins totalDraws totalLosses'
+        : 'name username profileImageUrl totalGoals totalAssists totalWins totalDraws totalLosses'
     ).lean();
 
     const usersById = new Map(users.map((user) => [String(user._id), user]));
@@ -911,6 +912,20 @@ export async function peladaRoutes(fastify) {
       pelada.votingStatus === 'OPEN' &&
       participants.has(String(request.user.id));
     const canCurrentUserVoteCraque = canCurrentUserVote;
+    const currentUserId = String(request.user.id);
+    const votesReceivedByCurrentUser = (pelada.votes || [])
+      .filter((vote) => String(vote.toUser) === currentUserId)
+      .map((vote) => Number(vote.score || 0));
+
+    const myMatchRating =
+      votesReceivedByCurrentUser.length > 0
+        ? Number(
+            (
+              votesReceivedByCurrentUser.reduce((sum, score) => sum + score, 0) /
+              votesReceivedByCurrentUser.length
+            ).toFixed(2)
+          )
+        : null;
 
     const cards = participantIds
       .map((participantId) => {
@@ -928,6 +943,7 @@ export async function peladaRoutes(fastify) {
           playerId: participantId,
           name: user.name,
           username: user.username,
+          profileImageUrl: user.profileImageUrl || null,
           ...(canSeeRatings ? { ratingAverage: user.ratingAverage } : {}),
           matchGoals: playerStats.goals,
           matchAssists: playerStats.assists,
@@ -950,6 +966,7 @@ export async function peladaRoutes(fastify) {
       votingStatus: pelada.votingStatus,
       canCurrentUserVote,
       canCurrentUserVoteCraque,
+      myMatchRating,
       myCraqueVote: myCraqueVote
         ? {
             firstUserId: String(myCraqueVote.firstUser),

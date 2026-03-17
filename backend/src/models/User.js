@@ -24,6 +24,10 @@ const userSchema = new mongoose.Schema(
       default: 'JOGADOR',
       required: true
     },
+    profileImageUrl: {
+      type: String,
+      trim: true
+    },
     position: {
       type: String,
       enum: ['ZAGUEIRO', 'MEIA', 'ATACANTE']

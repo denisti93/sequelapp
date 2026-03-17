@@ -81,6 +81,13 @@
                 >
                   @if (slot) {
                     <div class="podium-player-chip">
+                      <span class="podium-player-avatar">
+                        @if (slot.profileImageUrl) {
+                          <img [src]="slot.profileImageUrl" alt="Foto de {{ slot.userName | playerName }}" />
+                        } @else {
+                          <mat-icon>person</mat-icon>
+                        }
+                      </span>
                       <strong class="podium-player-name">{{ slot.userName | playerName }}</strong>
                       <span class="podium-player-score">{{ slot.value }} {{ category.unit }}</span>
                     </div>

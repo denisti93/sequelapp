@@ -18,6 +18,7 @@ export interface PeladaPlayer {
   name: string;
   username: string;
   role: 'ADM' | 'JOGADOR';
+  profileImageUrl?: string | null;
   position?: PlayerPosition;
   ratingAverage?: number | null;
 }
@@ -119,6 +120,7 @@ export interface RatingCard {
   playerId: string;
   name: string;
   username: string;
+  profileImageUrl?: string | null;
   ratingAverage?: number | null;
   matchGoals: number;
   matchAssists: number;
@@ -135,6 +137,7 @@ export interface RatingCardsResponse {
   votingStatus: VotingStatus;
   canCurrentUserVote: boolean;
   canCurrentUserVoteCraque: boolean;
+  myMatchRating: number | null;
   myCraqueVote: CraqueVoteSelection | null;
   cards: RatingCard[];
 }

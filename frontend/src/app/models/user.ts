@@ -5,6 +5,7 @@ export type PlayerPosition = 'ZAGUEIRO' | 'MEIA' | 'ATACANTE';
 export interface User {
   id: string;
   name: string;
+  profileImageUrl?: string | null;
   username: string;
   role: UserRole;
   position?: PlayerPosition;

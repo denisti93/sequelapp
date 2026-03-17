@@ -1,9 +1,11 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
+import { homeGuard } from './core/guards/home.guard';
 import { LoginComponent } from './pages/login/login.component';
 import { PeladaDetailComponent } from './pages/pelada-detail/pelada-detail.component';
 import { PeladaListComponent } from './pages/pelada-list/pelada-list.component';
+import { ProfileComponent } from './pages/profile/profile.component';
 import { RankingComponent } from './pages/ranking/ranking.component';
 import { SignupComponent } from './pages/signup/signup.component';
 
@@ -34,9 +36,15 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'perfil',
+    component: ProfileComponent,
+    canActivate: [authGuard]
+  },
+  {
     path: '',
     pathMatch: 'full',
-    redirectTo: 'peladas'
+    component: PeladaListComponent,
+    canActivate: [homeGuard]
   },
   {
     path: '**',
