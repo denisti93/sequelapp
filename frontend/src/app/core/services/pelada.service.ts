@@ -89,6 +89,23 @@ export class PeladaService {
     });
   }
 
+  configurePresenceOpenAt(id: string, openAt: string): Observable<{ message: string; openAt: string }> {
+    return this.http.patch<{ message: string; openAt: string }>(`${this.apiUrl}/peladas/${id}/presence/config`, {
+      openAt
+    });
+  }
+
+  confirmPresence(id: string): Observable<{ message: string; order: number; isWaitingList: boolean }> {
+    return this.http.post<{ message: string; order: number; isWaitingList: boolean }>(
+      `${this.apiUrl}/peladas/${id}/presence/confirm`,
+      {}
+    );
+  }
+
+  cancelPresence(id: string): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/peladas/${id}/presence/confirm`);
+  }
+
   openVoting(id: string): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${this.apiUrl}/peladas/${id}/voting/open`, {});
   }

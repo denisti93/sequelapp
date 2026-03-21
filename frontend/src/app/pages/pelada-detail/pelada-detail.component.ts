@@ -30,6 +30,8 @@ import {
   PeladaDetail,
   PeladaGuestPlayer,
   PlayerPosition,
+  PresenceEntry,
+  PresenceInfo,
   RatingCard,
   RatingCardsResponse,
   VoteDetail
@@ -129,6 +131,10 @@ export class PeladaDetailComponent implements OnInit {
     matches: this.formBuilder.array([])
   });
 
+  readonly presenceConfigForm = this.formBuilder.group({
+    openAt: ['', [Validators.required]]
+  });
+
   constructor(
     private readonly route: ActivatedRoute,
     private readonly formBuilder: UntypedFormBuilder,
@@ -213,6 +219,44 @@ export class PeladaDetailComponent implements OnInit {
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
+  get presenceInfo(): PresenceInfo | null {
+    return this.pelada?.presence || null;
+  }
+
+  get presenceEntries(): PresenceEntry[] {
+    return this.presenceInfo?.entries || [];
+  }
+
+  get confirmedPresenceEntries(): PresenceEntry[] {
+    return this.presenceEntries.filter((entry) => !entry.isWaitingList);
+  }
+
+  get waitingPresenceEntries(): PresenceEntry[] {
+    return this.presenceEntries.filter((entry) => entry.isWaitingList);
+  }
+
+  get canConfigurePresence(): boolean {
+    return Boolean(this.authService.isAdmin && this.presenceInfo?.isEligibleRacha && !this.isConcluded);
+  }
+
+  get canCurrentUserMarkPresence(): boolean {
+    return Boolean(
+      !this.authService.isAdmin &&
+        this.presenceInfo?.canMarkNow &&
+        !this.presenceInfo?.myEntry &&
+        !this.isConcluded
+    );
+  }
+
+  get canCurrentUserCancelPresence(): boolean {
+    return Boolean(
+      !this.authService.isAdmin &&
+        this.presenceInfo?.isEligibleRacha &&
+        this.presenceInfo?.myEntry &&
+        !this.isConcluded
+    );
+  }
+
   get isCurrentUserParticipantInRacha(): boolean {
     const currentUserId = String(this.authService.currentUser?.id || '');
     if (!currentUserId) {
@@ -252,6 +296,7 @@ export class PeladaDetailComponent implements OnInit {
         this.buildResultsForm(pelada);
         this.buildStatsForm(pelada);
         this.buildTournamentForm(pelada);
+        this.buildPresenceConfigForm(this.pelada);
         this.applyRatingCards(rating);
         this.applyVoteDetails(votes?.votes || []);
         this.updateFormEditability();
@@ -501,6 +546,16 @@ export class PeladaDetailComponent implements OnInit {
       .map(([round, matchIndexes]) => ({ round, matchIndexes }));
   }
 
+  private buildPresenceConfigForm(pelada: PeladaDetail | null): void {
+    const openAtValue = this.toLocalDateTimeInputValue(pelada?.presence?.openAt || null);
+    this.presenceConfigForm.patchValue(
+      {
+        openAt: openAtValue
+      },
+      { emitEvent: false }
+    );
+  }
+
   private applyRatingCards(rating: RatingCardsResponse): void {
     this.ratingCards = rating.cards.map((card) => ({
       ...card,
@@ -556,6 +611,7 @@ export class PeladaDetailComponent implements OnInit {
       this.resultsForm.disable({ emitEvent: false });
       this.statsForm.disable({ emitEvent: false });
       this.tournamentForm.disable({ emitEvent: false });
+      this.presenceConfigForm.disable({ emitEvent: false });
       return;
     }
 
@@ -563,6 +619,12 @@ export class PeladaDetailComponent implements OnInit {
     this.resultsForm.enable({ emitEvent: false });
     this.statsForm.enable({ emitEvent: false });
     this.tournamentForm.enable({ emitEvent: false });
+
+    if (this.canConfigurePresence) {
+      this.presenceConfigForm.enable({ emitEvent: false });
+    } else {
+      this.presenceConfigForm.disable({ emitEvent: false });
+    }
   }
 
   private ensureNotConcluded(): boolean {
@@ -852,6 +914,92 @@ export class PeladaDetailComponent implements OnInit {
 
   clearPlayerStatsSearch(): void {
     this.playerStatsSearchTerm = '';
+  }
+
+  savePresenceConfig(): void {
+    if (!this.canConfigurePresence || this.actionLoading || this.presenceConfigForm.invalid || !this.pelada) {
+      this.presenceConfigForm.markAllAsTouched();
+      return;
+    }
+
+    const openAtRaw = String(this.presenceConfigForm.get('openAt')?.value || '').trim();
+    if (!openAtRaw) {
+      this.snackBar.open('Informe data e horário para abrir a presença.', 'Fechar', {
+        duration: 2800
+      });
+      return;
+    }
+
+    const parsedOpenAt = new Date(openAtRaw);
+    if (Number.isNaN(parsedOpenAt.getTime())) {
+      this.snackBar.open('Data/hora de abertura inválida.', 'Fechar', {
+        duration: 2800
+      });
+      return;
+    }
+
+    this.actionLoading = true;
+    this.peladaService.configurePresenceOpenAt(this.peladaId, parsedOpenAt.toISOString()).subscribe({
+      next: (response) => {
+        this.snackBar.open(response.message || 'Abertura de presença configurada.', 'Fechar', {
+          duration: 2600
+        });
+        this.actionLoading = false;
+        this.loadData();
+      },
+      error: (error) => {
+        this.actionLoading = false;
+        this.snackBar.open(error?.error?.message || 'Falha ao configurar presença.', 'Fechar', {
+          duration: 3200
+        });
+      }
+    });
+  }
+
+  markPresence(): void {
+    if (!this.canCurrentUserMarkPresence || this.actionLoading) {
+      return;
+    }
+
+    this.actionLoading = true;
+    this.peladaService.confirmPresence(this.peladaId).subscribe({
+      next: (response) => {
+        this.snackBar.open(response.message || 'Presença marcada com sucesso.', 'Fechar', {
+          duration: 2800
+        });
+        this.actionLoading = false;
+        this.loadData();
+      },
+      error: (error) => {
+        this.actionLoading = false;
+        this.snackBar.open(error?.error?.message || 'Falha ao marcar presença.', 'Fechar', {
+          duration: 3200
+        });
+      }
+    });
+  }
+
+  cancelPresence(): void {
+    if (!this.canCurrentUserCancelPresence || this.actionLoading) {
+      return;
+    }
+
+    this.actionLoading = true;
+    this.peladaService.cancelPresence(this.peladaId).subscribe({
+      next: (response) => {
+        this.snackBar.open(response.message || 'Presença removida com sucesso.', 'Fechar', {
+          duration: 2800
+        });
+        this.actionLoading = false;
+        this.loadData();
+      },
+      error: (error) => {
+        this.actionLoading = false;
+        this.snackBar.open(error?.error?.message || 'Falha ao desistir do racha.', 'Fechar', {
+          duration: 3200
+        });
+      }
+    });
   }
 
   openVoting(): void {
@@ -1258,12 +1406,43 @@ export class PeladaDetailComponent implements OnInit {
       .join(', ');
   }
 
+  presenceStatusLabel(entry: PresenceEntry): string {
+    return entry.isWaitingList ? 'Lista de espera' : 'Confirmado';
+  }
+
+  myPresenceLabel(): string {
+    const order = Number(this.presenceInfo?.myEntry?.order || 0);
+    if (!order) {
+      return '';
+    }
+
+    if (order <= Number(this.presenceInfo?.limit || 20)) {
+      return `Você confirmou presença na ${order}ª posição.`;
+    }
+
+    return `Você está na lista de Suplentes. Posição: ${order}`;
+  }
+
   private normalizeSearch(value: string): string {
     return String(value || '')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .trim()
       .toLowerCase();
+  }
+
+  private toLocalDateTimeInputValue(value: string | null): string {
+    if (!value) {
+      return '';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    const timezoneOffsetMs = date.getTimezoneOffset() * 60_000;
+    return new Date(date.getTime() - timezoneOffsetMs).toISOString().slice(0, 16);
   }
 
   private preferredLineFromPosition(position?: PlayerPosition): FieldLine | null {
@@ -1354,7 +1533,20 @@ export class PeladaDetailComponent implements OnInit {
           ...player,
           profileImageUrl: toAbsoluteProfileImageUrl(player.profileImageUrl)
         }))
-      }))
+      })),
+      presence: {
+        ...pelada.presence,
+        entries: (pelada.presence?.entries || []).map((entry) => ({
+          ...entry,
+          profileImageUrl: toAbsoluteProfileImageUrl(entry.profileImageUrl)
+        })),
+        myEntry: pelada.presence?.myEntry
+          ? {
+              ...pelada.presence.myEntry,
+              profileImageUrl: toAbsoluteProfileImageUrl(pelada.presence.myEntry.profileImageUrl)
+            }
+          : null
+      }
     };
   }
 }

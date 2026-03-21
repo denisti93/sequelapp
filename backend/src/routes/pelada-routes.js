@@ -15,6 +15,7 @@ const CRAQUE_WEIGHTS = {
   secondUser: 3,
   thirdUser: 1
 };
+const PRESENCE_LIMIT = 20;
 
 function formatPeladaSummary(pelada) {
   const date = new Date(pelada.date);
@@ -56,6 +57,68 @@ function buildTeamResultByPlayer(teams = []) {
 
 function isConcluded(pelada) {
   return (pelada?.status || 'OPEN') === 'CONCLUDED';
+}
+
+function hasRachaHappened(pelada) {
+  return new Date(pelada?.date).getTime() <= Date.now();
+}
+
+function isPresenceEligibleRacha(pelada) {
+  return !isConcluded(pelada) && !hasRachaHappened(pelada);
+}
+
+function isPresenceWindowOpen(pelada, now = new Date()) {
+  const presenceOpenAt = pelada?.presenceOpenAt ? new Date(pelada.presenceOpenAt) : null;
+  if (!presenceOpenAt || Number.isNaN(presenceOpenAt.getTime())) {
+    return false;
+  }
+
+  return presenceOpenAt.getTime() <= now.getTime();
+}
+
+function sortPresenceEntries(entries = []) {
+  return [...entries].sort((a, b) => {
+    const aTime = new Date(a?.markedAt || 0).getTime();
+    const bTime = new Date(b?.markedAt || 0).getTime();
+    if (aTime !== bTime) {
+      return aTime - bTime;
+    }
+
+    return String(a?._id || '').localeCompare(String(b?._id || ''));
+  });
+}
+
+function buildPresenceInfoForResponse(pelada, currentUserId) {
+  const sortedEntries = sortPresenceEntries(pelada?.presenceEntries || []);
+  const entries = sortedEntries.map((entry, index) => {
+    const user = entry?.user && typeof entry.user === 'object' ? entry.user : null;
+    const userId = String(user?._id || entry?.user || '');
+    return {
+      order: index + 1,
+      userId,
+      userName: user?.name || 'Jogador removido',
+      username: user?.username || '',
+      profileImageUrl: user?.profileImageUrl || null,
+      markedAt: entry?.markedAt || null,
+      isWaitingList: index >= PRESENCE_LIMIT
+    };
+  });
+
+  const normalizedCurrentUserId = String(currentUserId || '');
+  const myEntry = entries.find((entry) => entry.userId === normalizedCurrentUserId) || null;
+  const canMarkNow = isPresenceEligibleRacha(pelada) && isPresenceWindowOpen(pelada);
+
+  return {
+    limit: PRESENCE_LIMIT,
+    openAt: pelada?.presenceOpenAt || null,
+    isEligibleRacha: isPresenceEligibleRacha(pelada),
+    canMarkNow,
+    totalMarked: entries.length,
+    confirmedCount: Math.min(PRESENCE_LIMIT, entries.length),
+    waitingCount: Math.max(entries.length - PRESENCE_LIMIT, 0),
+    myEntry,
+    entries
+  };
 }
 
 function ensureEditableRacha(pelada, reply) {
@@ -230,6 +293,8 @@ export async function peladaRoutes(fastify) {
         teams: [],
         tournamentMatches: [],
         playerStats: [],
+        presenceOpenAt: null,
+        presenceEntries: [],
         votes: [],
         craqueVotes: [],
         craqueResult: null,
@@ -250,6 +315,7 @@ export async function peladaRoutes(fastify) {
     const pelada = await Pelada.findById(request.params.id)
       .populate('teams.players', teamPlayerProjection)
       .populate('playerStats.player', 'name username')
+      .populate('presenceEntries.user', 'name username profileImageUrl')
       .lean();
 
     if (!pelada) {
@@ -300,6 +366,7 @@ export async function peladaRoutes(fastify) {
         goals: stat.goals || 0,
         assists: stat.assists || 0
       })),
+      presence: buildPresenceInfoForResponse(pelada, request.user.id),
       votesCount: (pelada.votes || []).length,
       tournament: tournamentInfo,
       craquePodium
@@ -663,6 +730,174 @@ export async function peladaRoutes(fastify) {
       return { message: 'Racha concluido com sucesso.' };
     }
   );
+
+  fastify.patch(
+    '/:id/presence/config',
+    {
+      preHandler: [authenticate, authorize('ADM')]
+    },
+    async (request, reply) => {
+      const { openAt } = request.body || {};
+      if (!openAt) {
+        return reply.code(400).send({ message: 'Informe a data e horário de abertura da presença.' });
+      }
+
+      const parsedOpenAt = new Date(openAt);
+      if (Number.isNaN(parsedOpenAt.getTime())) {
+        return reply.code(400).send({ message: 'Data/hora de presença inválida.' });
+      }
+
+      const pelada = await Pelada.findById(request.params.id);
+      if (!pelada) {
+        return reply.code(404).send({ message: 'Pelada nao encontrada.' });
+      }
+
+      if (!isPresenceEligibleRacha(pelada)) {
+        return reply.code(409).send({
+          message: 'A presença só pode ser configurada em rachas abertos que ainda não aconteceram.'
+        });
+      }
+
+      if (parsedOpenAt.getTime() > new Date(pelada.date).getTime()) {
+        return reply.code(400).send({
+          message: 'A abertura da presença deve acontecer antes da data do racha.'
+        });
+      }
+
+      pelada.presenceOpenAt = parsedOpenAt;
+      await pelada.save();
+
+      return {
+        message: 'Abertura de presença configurada com sucesso.',
+        openAt: pelada.presenceOpenAt
+      };
+    }
+  );
+
+  fastify.post('/:id/presence/confirm', { preHandler: [authenticate] }, async (request, reply) => {
+    if (request.user.role !== 'JOGADOR') {
+      return reply.code(403).send({ message: 'Apenas jogadores podem marcar presença.' });
+    }
+
+    const now = new Date();
+    const peladaId = String(request.params.id);
+    const currentUserId = String(request.user.id);
+
+    const updatedPelada = await Pelada.findOneAndUpdate(
+      {
+        _id: peladaId,
+        status: 'OPEN',
+        date: { $gt: now },
+        presenceOpenAt: { $ne: null, $lte: now },
+        'presenceEntries.user': { $ne: currentUserId }
+      },
+      {
+        $push: {
+          presenceEntries: {
+            user: currentUserId,
+            markedAt: now
+          }
+        }
+      },
+      { new: true }
+    ).lean();
+
+    if (!updatedPelada) {
+      const pelada = await Pelada.findById(peladaId).lean();
+      if (!pelada) {
+        return reply.code(404).send({ message: 'Pelada nao encontrada.' });
+      }
+
+      if (!isPresenceEligibleRacha(pelada)) {
+        return reply.code(409).send({
+          message: 'Este racha não está disponível para marcação de presença.'
+        });
+      }
+
+      if (!pelada.presenceOpenAt) {
+        return reply.code(400).send({
+          message: 'O ADM ainda não configurou a abertura da presença.'
+        });
+      }
+
+      if (!isPresenceWindowOpen(pelada)) {
+        return reply.code(400).send({
+          message: 'A presença ainda não foi liberada para este racha.'
+        });
+      }
+
+      const alreadyMarked = (pelada.presenceEntries || []).some(
+        (entry) => String(entry.user) === currentUserId
+      );
+      if (alreadyMarked) {
+        return reply.code(409).send({
+          message: 'Você já marcou presença para este racha.'
+        });
+      }
+
+      return reply.code(409).send({ message: 'Não foi possível marcar presença agora. Tente novamente.' });
+    }
+
+    const sortedEntries = sortPresenceEntries(updatedPelada.presenceEntries || []);
+    const order = sortedEntries.findIndex((entry) => String(entry.user) === currentUserId) + 1;
+    const isWaitingList = order > PRESENCE_LIMIT;
+
+    return reply.code(201).send({
+      message: isWaitingList
+        ? 'Presença marcada. Você está na lista de espera.'
+        : 'Presença marcada. Você está entre os 20 primeiros.',
+      order,
+      isWaitingList
+    });
+  });
+
+  fastify.delete('/:id/presence/confirm', { preHandler: [authenticate] }, async (request, reply) => {
+    if (request.user.role !== 'JOGADOR') {
+      return reply.code(403).send({ message: 'Apenas jogadores podem desistir da presença.' });
+    }
+
+    const now = new Date();
+    const peladaId = String(request.params.id);
+    const currentUserId = String(request.user.id);
+
+    const updatedPelada = await Pelada.findOneAndUpdate(
+      {
+        _id: peladaId,
+        status: 'OPEN',
+        date: { $gt: now },
+        'presenceEntries.user': currentUserId
+      },
+      {
+        $pull: {
+          presenceEntries: {
+            user: currentUserId
+          }
+        }
+      },
+      { new: true }
+    ).lean();
+
+    if (!updatedPelada) {
+      const pelada = await Pelada.findById(peladaId).lean();
+      if (!pelada) {
+        return reply.code(404).send({ message: 'Pelada nao encontrada.' });
+      }
+
+      if (!isPresenceEligibleRacha(pelada)) {
+        return reply.code(409).send({
+          message: 'Este racha não está disponível para controle de presença.'
+        });
+      }
+
+      return reply.code(404).send({
+        message: 'Você não está marcado na presença deste racha.'
+      });
+    }
+
+    return {
+      message: 'Você desistiu do racha. Sua presença foi removida.'
+    };
+  });
 
   fastify.post('/:id/votes', { preHandler: [authenticate] }, async (request, reply) => {
     const { toUserId, score } = request.body || {};

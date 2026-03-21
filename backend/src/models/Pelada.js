@@ -123,6 +123,24 @@ const playerStatSchema = new mongoose.Schema(
   }
 );
 
+const presenceEntrySchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    markedAt: {
+      type: Date,
+      required: true,
+      default: Date.now
+    }
+  },
+  {
+    _id: true
+  }
+);
+
 const tournamentMatchSchema = new mongoose.Schema(
   {
     homeTeamId: {
@@ -229,6 +247,11 @@ const peladaSchema = new mongoose.Schema(
     teams: [teamSchema],
     tournamentMatches: [tournamentMatchSchema],
     playerStats: [playerStatSchema],
+    presenceOpenAt: {
+      type: Date,
+      default: null
+    },
+    presenceEntries: [presenceEntrySchema],
     votingStatus: {
       type: String,
       enum: ['CLOSED', 'OPEN', 'FINISHED'],

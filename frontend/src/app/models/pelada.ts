@@ -46,6 +46,28 @@ export interface PeladaPlayerStat {
   assists: number;
 }
 
+export interface PresenceEntry {
+  order: number;
+  userId: string;
+  userName: string;
+  username: string;
+  profileImageUrl?: string | null;
+  markedAt: string | null;
+  isWaitingList: boolean;
+}
+
+export interface PresenceInfo {
+  limit: number;
+  openAt: string | null;
+  isEligibleRacha: boolean;
+  canMarkNow: boolean;
+  totalMarked: number;
+  confirmedCount: number;
+  waitingCount: number;
+  myEntry: PresenceEntry | null;
+  entries: PresenceEntry[];
+}
+
 export interface CraquePodiumItem {
   position: number;
   playerId: string;
@@ -105,6 +127,7 @@ export interface PeladaDetail {
   votingStatus: VotingStatus;
   teams: PeladaTeam[];
   playerStats: PeladaPlayerStat[];
+  presence: PresenceInfo;
   votesCount: number;
   tournament: TournamentInfo | null;
   craquePodium: CraquePodium;

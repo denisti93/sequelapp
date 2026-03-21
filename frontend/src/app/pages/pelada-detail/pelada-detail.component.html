@@ -35,6 +35,137 @@
       </div>
     </section>
 
+    <section class="panel presence-panel">
+      <div class="presence-header">
+        <div>
+          <h2 class="panel-title">Confirmação de presença</h2>
+          <p class="muted">
+            Os {{ pelada.presence.limit }} primeiros entram na lista principal. Os demais ficam na lista de espera.
+          </p>
+        </div>
+        @if (pelada.presence.openAt) {
+          <span class="status-chip">Abertura: {{ pelada.presence.openAt | date : 'dd/MM/yyyy HH:mm' }}</span>
+        } @else {
+          <span class="status-chip">Abertura ainda não configurada</span>
+        }
+      </div>
+
+      @if (authService.isAdmin) {
+        <form [formGroup]="presenceConfigForm" class="presence-config-form" (ngSubmit)="savePresenceConfig()">
+          <mat-form-field appearance="outline" class="presence-open-at-field">
+            <mat-label>Abrir presença em</mat-label>
+            <input matInput type="datetime-local" formControlName="openAt" />
+          </mat-form-field>
+
+          <button
+            mat-flat-button
+            color="primary"
+            type="submit"
+            [disabled]="actionLoading || !canConfigurePresence || presenceConfigForm.invalid"
+          >
+            Salvar horário de abertura
+          </button>
+        </form>
+      }
+
+      @if (!pelada.presence.isEligibleRacha) {
+        <p class="muted">
+          A presença só pode ser marcada em rachas abertos que ainda não aconteceram.
+        </p>
+      } @else if (!authService.isAdmin) {
+        @if (!pelada.presence.openAt) {
+          <p class="muted">O ADM ainda não configurou o horário de abertura da presença.</p>
+        } @else if (!pelada.presence.canMarkNow && !pelada.presence.myEntry) {
+          <p class="muted">
+            A marcação será liberada em {{ pelada.presence.openAt | date : 'dd/MM/yyyy HH:mm' }}.
+          </p>
+        }
+
+        @if (pelada.presence.myEntry) {
+          <div class="presence-action-box confirmed">
+            <strong>{{ myPresenceLabel() }}</strong>
+            <p class="muted">Você já marcou presença neste racha.</p>
+            <button
+              mat-stroked-button
+              color="warn"
+              type="button"
+              (click)="cancelPresence()"
+              [disabled]="actionLoading || !canCurrentUserCancelPresence"
+            >
+              DESISTIR DO RACHA
+            </button>
+          </div>
+        } @else {
+          <div class="presence-action-box">
+            <button
+              mat-flat-button
+              color="accent"
+              type="button"
+              class="presence-cta-button"
+              (click)="markPresence()"
+              [disabled]="actionLoading || !canCurrentUserMarkPresence"
+            >
+              VOU PRO RACHA
+            </button>
+          </div>
+        }
+      }
+
+      <div class="presence-summary-row">
+        <span class="status-chip success">Confirmados: {{ pelada.presence.confirmedCount }}</span>
+        <span class="status-chip">Lista de espera: {{ pelada.presence.waitingCount }}</span>
+        <span class="muted">Total de presenças: {{ pelada.presence.totalMarked }}</span>
+      </div>
+
+      @if (pelada.presence.entries.length === 0) {
+        <p class="muted">Nenhum jogador marcou presença ainda.</p>
+      } @else {
+        <details class="presence-collapsible">
+          <summary class="presence-collapsible-summary">
+            <div class="presence-collapsed-info">
+              @if (!authService.isAdmin && pelada.presence.myEntry) {
+                <strong>Sua posição: {{ pelada.presence.myEntry.order }}º</strong>
+                <small class="muted">
+                  {{ pelada.presence.myEntry.isWaitingList ? 'Lista de espera' : 'Confirmado entre os 20 primeiros' }}
+                </small>
+              } @else if (!authService.isAdmin) {
+                <strong>Você ainda não marcou presença</strong>
+                <small class="muted">Abra a lista para acompanhar a ordem completa</small>
+              } @else {
+                <strong>Fila de presença com {{ pelada.presence.totalMarked }} jogador(es)</strong>
+                <small class="muted">Clique para abrir ou esconder a lista completa</small>
+              }
+            </div>
+            <span class="status-chip">Ver/ocultar lista</span>
+          </summary>
+
+          <div class="presence-list-wrap">
+            @for (entry of pelada.presence.entries; track entry.userId) {
+              <div class="presence-row" [class.waiting]="entry.isWaitingList">
+                <span class="presence-order">{{ entry.order }}º</span>
+                <span class="presence-avatar">
+                  @if (entry.profileImageUrl) {
+                    <img [src]="entry.profileImageUrl" alt="Foto de {{ entry.userName | playerName }}" />
+                  } @else {
+                    <mat-icon>person</mat-icon>
+                  }
+                </span>
+                <div class="presence-player">
+                  <strong>{{ entry.userName | playerName }}</strong>
+                  <small class="muted">
+                    {{ entry.markedAt ? (entry.markedAt | date : 'dd/MM HH:mm:ss') : '-' }}
+                  </small>
+                </div>
+                <span class="status-chip" [class.success]="!entry.isWaitingList">
+                  {{ presenceStatusLabel(entry) }}
+                </span>
+              </div>
+            }
+          </div>
+        </details>
+      }
+    </section>
+
     <section class="panel">
       <h2 class="panel-title">Times do racha</h2>
       <div class="team-grid">
