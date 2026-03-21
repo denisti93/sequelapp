@@ -93,6 +93,7 @@ export class PeladaDetailComponent implements OnInit {
 
   loading = false;
   actionLoading = false;
+  exportingTeamsImage = false;
 
   ratingCards: RatingCard[] = [];
   myMatchRating: number | null = null;
@@ -114,6 +115,8 @@ export class PeladaDetailComponent implements OnInit {
     { value: 'MEIA', label: 'Meia' },
     { value: 'ATACANTE', label: 'Atacante' }
   ];
+  readonly maxTeamsPerRacha = 4;
+  readonly maxPlayersPerTeam = 5;
 
   readonly teamForm = this.formBuilder.group({
     teams: this.formBuilder.array([])
@@ -316,22 +319,29 @@ export class PeladaDetailComponent implements OnInit {
     this.teamsArray.clear();
 
     const existingTeams = pelada.teams || [];
-    const totalTeams = Math.max(4, existingTeams.length || 0);
+    const totalTeams =
+      existingTeams.length > 0
+        ? Math.min(this.maxTeamsPerRacha, existingTeams.length)
+        : this.maxTeamsPerRacha;
 
     for (let index = 0; index < totalTeams; index += 1) {
       const team = existingTeams[index];
-      const guestPlayers = (team?.guestPlayers || []).map((guest) => this.createGuestPlayerGroup(guest));
-      this.teamsArray.push(
-        this.formBuilder.group({
-          name: [team?.name || `Time ${index + 1}`, [Validators.required]],
-          players: [team?.players?.map((player) => player.id) || [], [maxLengthArrayValidator(5)]],
-          guestPlayers: this.formBuilder.array(guestPlayers),
-          goalkeepersText: [team?.goalkeepers?.join(', ') || '']
-        })
-      );
+      this.teamsArray.push(this.createTeamGroup(team));
     }
 
     this.normalizeTeamSelections();
+  }
+
+  private createTeamGroup(team?: PeladaDetail['teams'][number]) {
+    const guestPlayers = (team?.guestPlayers || []).map((guest) => this.createGuestPlayerGroup(guest));
+
+    return this.formBuilder.group({
+      players: [team?.players?.map((player) => player.id) || [], [maxLengthArrayValidator(this.maxPlayersPerTeam)]],
+      guestPlayers: this.formBuilder.array(guestPlayers),
+      guestNameDraft: [''],
+      guestPositionDraft: ['MEIA', [Validators.required]],
+      goalkeepersText: [team?.goalkeepers?.join(', ') || '']
+    });
   }
 
   private createGuestPlayerGroup(guest?: PeladaGuestPlayer) {
@@ -339,6 +349,38 @@ export class PeladaDetailComponent implements OnInit {
       name: [guest?.name || '', [Validators.required]],
       position: [guest?.position || 'MEIA', [Validators.required]]
     });
+  }
+
+  addTeamSlot(): void {
+    if (this.actionLoading || this.isConcluded || this.teamsArray.length >= this.maxTeamsPerRacha) {
+      return;
+    }
+
+    this.teamsArray.push(this.createTeamGroup());
+  }
+
+  removeTeamSlot(teamIndex: number): void {
+    if (this.actionLoading || this.isConcluded) {
+      return;
+    }
+
+    if (this.teamsArray.length <= 1) {
+      this.snackBar.open('É necessário manter ao menos um time.', 'Fechar', {
+        duration: 2600
+      });
+      return;
+    }
+
+    if (teamIndex < 0 || teamIndex >= this.teamsArray.length) {
+      return;
+    }
+
+    this.teamsArray.removeAt(teamIndex);
+    this.normalizeTeamSelections();
+  }
+
+  teamDisplayName(teamIndex: number): string {
+    return `Time ${teamIndex + 1}`;
   }
 
   guestPlayersArray(teamIndex: number): UntypedFormArray {
@@ -350,7 +392,42 @@ export class PeladaDetailComponent implements OnInit {
       return;
     }
 
-    this.guestPlayersArray(teamIndex).push(this.createGuestPlayerGroup());
+    const teamGroup = this.teamsArray.at(teamIndex);
+    const draftNameControl = teamGroup.get('guestNameDraft');
+    const draftPositionControl = teamGroup.get('guestPositionDraft');
+
+    const guestName = String(draftNameControl?.value || '')
+      .trim()
+      .replace(/\s+/g, ' ');
+    const guestPosition = String(draftPositionControl?.value || 'MEIA')
+      .trim()
+      .toUpperCase() as PlayerPosition;
+    const validPositions: PlayerPosition[] = ['ZAGUEIRO', 'MEIA', 'ATACANTE'];
+
+    if (!guestName) {
+      draftNameControl?.markAsTouched();
+      this.snackBar.open('Digite o nome do convidado antes de adicionar.', 'Fechar', {
+        duration: 2600
+      });
+      return;
+    }
+
+    if (!validPositions.includes(guestPosition)) {
+      this.snackBar.open('Selecione uma posição válida para o convidado.', 'Fechar', {
+        duration: 2600
+      });
+      return;
+    }
+
+    this.guestPlayersArray(teamIndex).push(
+      this.createGuestPlayerGroup({
+        name: guestName,
+        position: guestPosition
+      })
+    );
+
+    draftNameControl?.setValue('', { emitEvent: false });
+    draftPositionControl?.setValue('MEIA', { emitEvent: false });
   }
 
   removeGuestPlayer(teamIndex: number, guestIndex: number): void {
@@ -407,7 +484,7 @@ export class PeladaDetailComponent implements OnInit {
       return false;
     }
 
-    if (this.totalTeamPlayersCount(currentTeamIndex) >= 5) {
+    if (this.totalTeamPlayersCount(currentTeamIndex) >= this.maxPlayersPerTeam) {
       return true;
     }
 
@@ -465,7 +542,7 @@ export class PeladaDetailComponent implements OnInit {
   }
 
   canAddGuestPlayer(teamIndex: number): boolean {
-    return this.totalTeamPlayersCount(teamIndex) < 5;
+    return this.totalTeamPlayersCount(teamIndex) < this.maxPlayersPerTeam;
   }
 
   private buildResultsForm(pelada: PeladaDetail): void {
@@ -700,13 +777,30 @@ export class PeladaDetailComponent implements OnInit {
     }
 
     const rawTeams = this.teamsArray.getRawValue() as Array<{
-      name: string;
       players: string[];
       guestPlayers: Array<{ name: string; position: PlayerPosition }>;
       goalkeepersText: string;
     }>;
 
-    const players = rawTeams.flatMap((team) => team.players || []);
+    const activeTeams = rawTeams
+      .map((team) => ({
+        players: Array.isArray(team.players) ? team.players.map((playerId) => String(playerId)) : [],
+        guestPlayers: Array.isArray(team.guestPlayers) ? team.guestPlayers : [],
+        goalkeepers: String(team.goalkeepersText || '')
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean)
+      }))
+      .filter((team) => team.players.length + team.guestPlayers.length > 0);
+
+    if (activeTeams.length < 1) {
+      this.snackBar.open('Adicione ao menos 1 time com jogadores cadastrados ou convidados.', 'Fechar', {
+        duration: 3200
+      });
+      return;
+    }
+
+    const players = activeTeams.flatMap((team) => team.players || []);
     if (new Set(players).size !== players.length) {
       this.snackBar.open('Um jogador não pode estar em mais de um time.', 'Fechar', {
         duration: 2800
@@ -715,14 +809,15 @@ export class PeladaDetailComponent implements OnInit {
     }
 
     const validPositions: PlayerPosition[] = ['ZAGUEIRO', 'MEIA', 'ATACANTE'];
-    for (const team of rawTeams) {
-      const teamName = String(team.name || 'Time').trim();
+    for (let index = 0; index < activeTeams.length; index += 1) {
+      const team = activeTeams[index];
+      const teamName = this.teamDisplayName(index);
       const registeredCount = Array.isArray(team.players) ? team.players.length : 0;
       const guestPlayers = Array.isArray(team.guestPlayers) ? team.guestPlayers : [];
 
-      if (registeredCount + guestPlayers.length !== 5) {
+      if (registeredCount + guestPlayers.length > this.maxPlayersPerTeam) {
         this.snackBar.open(
-          `O time ${teamName || 'sem nome'} precisa ter exatamente 5 jogadores entre cadastrados e convidados.`,
+          `O ${teamName} pode ter no máximo ${this.maxPlayersPerTeam} jogadores entre cadastrados e convidados.`,
           'Fechar',
           {
             duration: 3200
@@ -739,7 +834,7 @@ export class PeladaDetailComponent implements OnInit {
 
         if (!guestName || !validPositions.includes(guestPosition)) {
           this.snackBar.open(
-            `Todo convidado do time ${teamName || 'sem nome'} precisa de nome e posição válidos.`,
+            `Todo convidado do ${teamName} precisa de nome e posição válidos.`,
             'Fechar',
             {
               duration: 3200
@@ -752,8 +847,8 @@ export class PeladaDetailComponent implements OnInit {
 
     this.actionLoading = true;
 
-    const payload = rawTeams.map((team) => ({
-      name: team.name,
+    const payload = activeTeams.map((team, index) => ({
+      name: this.teamDisplayName(index),
       players: team.players,
       guestPlayers: (team.guestPlayers || []).map((guest) => ({
         name: String(guest.name || '').trim(),
@@ -761,10 +856,7 @@ export class PeladaDetailComponent implements OnInit {
           .trim()
           .toUpperCase() as PlayerPosition
       })),
-      goalkeepers: String(team.goalkeepersText || '')
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean)
+      goalkeepers: team.goalkeepers
     }));
 
     this.peladaService.updateTeams(this.peladaId, payload).subscribe({
@@ -1392,6 +1484,36 @@ export class PeladaDetailComponent implements OnInit {
     return toPlayerDisplayName(name);
   }
 
+  async exportTeamsImage(): Promise<void> {
+    if (!this.pelada || this.pelada.teams.length === 0 || this.exportingTeamsImage) {
+      return;
+    }
+
+    this.exportingTeamsImage = true;
+    try {
+      const blob = await this.buildTeamsExportImageBlob(this.pelada.teams);
+      const copiedToClipboard = await this.copyImageBlobToClipboard(blob);
+
+      if (copiedToClipboard) {
+        this.snackBar.open('Imagem dos times copiada para a área de transferência.', 'Fechar', {
+          duration: 3200
+        });
+        return;
+      }
+
+      this.downloadImageBlob(blob, this.teamsExportFileName(this.pelada.date));
+      this.snackBar.open('Imagem gerada e baixada em PNG.', 'Fechar', {
+        duration: 3200
+      });
+    } catch {
+      this.snackBar.open('Não foi possível exportar os times agora. Tente novamente.', 'Fechar', {
+        duration: 3200
+      });
+    } finally {
+      this.exportingTeamsImage = false;
+    }
+  }
+
   formatMatchScore(homeGoals: number | null, awayGoals: number | null): string {
     if (homeGoals === null || awayGoals === null) {
       return 'x';
@@ -1404,6 +1526,15 @@ export class PeladaDetailComponent implements OnInit {
     return (guestPlayers || [])
       .map((guest) => `${toPlayerDisplayName(guest.name)} (${this.positionLabel(guest.position)})`)
       .join(', ');
+  }
+
+  guestPlayerChipLabel(teamIndex: number, guestIndex: number): string {
+    const guest = this.guestPlayersArray(teamIndex).at(guestIndex)?.value as
+      | { name?: string; position?: PlayerPosition }
+      | undefined;
+    const guestName = toPlayerDisplayName(String(guest?.name || 'Convidado'));
+    const guestPosition = this.positionLabel(guest?.position);
+    return `${guestName} (${guestPosition})`;
   }
 
   presenceStatusLabel(entry: PresenceEntry): string {
@@ -1522,6 +1653,262 @@ export class PeladaDetailComponent implements OnInit {
     if (position === 'MEIA') return 'Meia';
     if (position === 'ATACANTE') return 'Atacante';
     return '-';
+  }
+
+  private teamsExportFileName(dateValue: string): string {
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) {
+      return 'racha-times.png';
+    }
+
+    const dateLabel = date.toISOString().slice(0, 10);
+    return `racha-times-${dateLabel}.png`;
+  }
+
+  private async buildTeamsExportImageBlob(teams: PeladaDetail['teams']): Promise<Blob> {
+    const columns = teams.length === 1 ? 1 : 2;
+    const rows = Math.ceil(teams.length / columns);
+    const cardWidth = 540;
+    const cardHeight = 700;
+    const gap = 22;
+    const pagePadding = 28;
+    const titleHeight = 96;
+
+    const width = pagePadding * 2 + columns * cardWidth + (columns - 1) * gap;
+    const height = titleHeight + pagePadding + rows * cardHeight + (rows - 1) * gap + pagePadding;
+    const scale = 2;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+      throw new Error('Falha ao criar contexto do canvas.');
+    }
+
+    context.scale(scale, scale);
+
+    const background = context.createLinearGradient(0, 0, width, height);
+    background.addColorStop(0, '#f6ebff');
+    background.addColorStop(0.55, '#fff3e6');
+    background.addColorStop(1, '#f8f6ff');
+    context.fillStyle = background;
+    context.fillRect(0, 0, width, height);
+
+    context.fillStyle = '#5b21b6';
+    context.font = '700 34px Arial';
+    context.fillText('Racha - Formação dos Times', pagePadding, 52);
+
+    context.fillStyle = '#7c3aed';
+    context.font = '500 18px Arial';
+    context.fillText(
+      `Gerado em ${new Date().toLocaleString('pt-BR')}`,
+      pagePadding,
+      80
+    );
+
+    teams.forEach((team, index) => {
+      const row = Math.floor(index / columns);
+      const column = index % columns;
+      const x = pagePadding + column * (cardWidth + gap);
+      const y = titleHeight + row * (cardHeight + gap);
+      this.drawTeamExportCard(context, team, x, y, cardWidth, cardHeight, index);
+    });
+
+    return this.canvasToBlob(canvas);
+  }
+
+  private drawTeamExportCard(
+    context: CanvasRenderingContext2D,
+    team: PeladaDetail['teams'][number],
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    index: number
+  ): void {
+    const radius = 18;
+    this.drawRoundedRect(context, x, y, width, height, radius, '#ffffff', '#d8c3ff');
+
+    const headerHeight = 78;
+    const headerGradient = context.createLinearGradient(x, y, x + width, y);
+    headerGradient.addColorStop(0, '#6d28d9');
+    headerGradient.addColorStop(1, '#f97316');
+    this.drawRoundedRect(context, x, y, width, headerHeight, radius, headerGradient, '#6d28d9');
+
+    context.fillStyle = '#fff7ed';
+    context.font = '700 28px Arial';
+    context.fillText(this.teamDisplayName(index), x + 18, y + 34);
+    context.font = '600 18px Arial';
+    context.fillText(`${team.wins}V / ${team.draws}E / ${team.losses}D`, x + 18, y + 60);
+
+    const pitchX = x + 16;
+    const pitchY = y + headerHeight + 14;
+    const pitchWidth = width - 32;
+    const pitchHeight = height - headerHeight - 118;
+    this.drawPitch(context, pitchX, pitchY, pitchWidth, pitchHeight);
+
+    const layout = this.teamFieldLayout(team);
+    this.drawPlayersLine(context, layout.attack, pitchX, pitchY + pitchHeight * 0.22, pitchWidth);
+    this.drawPlayersLine(context, layout.midfield, pitchX, pitchY + pitchHeight * 0.5, pitchWidth);
+    this.drawPlayersLine(context, layout.defense, pitchX, pitchY + pitchHeight * 0.78, pitchWidth);
+
+    const goalkeepersLabel = team.goalkeepers?.length
+      ? `Goleiros: ${team.goalkeepers.join(', ')}`
+      : 'Goleiros: -';
+    context.fillStyle = '#6b7280';
+    context.font = '500 16px Arial';
+    context.fillText(goalkeepersLabel, x + 16, y + height - 26);
+  }
+
+  private drawPitch(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): void {
+    const radius = 14;
+    this.drawRoundedRect(context, x, y, width, height, radius, '#2f9f12', '#ffffff');
+
+    const stripes = 10;
+    const stripeHeight = height / stripes;
+    for (let index = 0; index < stripes; index += 1) {
+      context.fillStyle = index % 2 === 0 ? 'rgba(82, 178, 26, 0.55)' : 'rgba(44, 130, 12, 0.45)';
+      context.fillRect(x, y + index * stripeHeight, width, stripeHeight);
+    }
+
+    context.strokeStyle = 'rgba(255,255,255,0.92)';
+    context.lineWidth = 2.2;
+
+    context.beginPath();
+    context.moveTo(x, y + height / 2);
+    context.lineTo(x + width, y + height / 2);
+    context.stroke();
+
+    context.beginPath();
+    context.arc(x + width / 2, y + height / 2, 36, 0, Math.PI * 2);
+    context.stroke();
+
+    const penaltyWidth = Math.min(width * 0.52, 148);
+    const penaltyHeight = 52;
+    const penaltyX = x + (width - penaltyWidth) / 2;
+
+    context.strokeRect(penaltyX, y, penaltyWidth, penaltyHeight);
+    context.strokeRect(penaltyX, y + height - penaltyHeight, penaltyWidth, penaltyHeight);
+  }
+
+  private drawPlayersLine(
+    context: CanvasRenderingContext2D,
+    players: TeamFieldPlayer[],
+    startX: number,
+    lineY: number,
+    lineWidth: number
+  ): void {
+    if (!players || players.length === 0) {
+      return;
+    }
+
+    players.forEach((player, index) => {
+      const pointX = startX + ((index + 1) * lineWidth) / (players.length + 1);
+      const pointY = lineY;
+      const radius = 16;
+
+      const circleGradient = context.createRadialGradient(
+        pointX - 5,
+        pointY - 5,
+        5,
+        pointX,
+        pointY,
+        radius
+      );
+      circleGradient.addColorStop(0, '#f97316');
+      circleGradient.addColorStop(1, '#6d28d9');
+      context.fillStyle = circleGradient;
+      context.beginPath();
+      context.arc(pointX, pointY, radius, 0, Math.PI * 2);
+      context.fill();
+
+      context.lineWidth = player.isGuest ? 2.5 : 1.8;
+      context.strokeStyle = player.isGuest ? '#fff1f2' : '#fef3c7';
+      context.stroke();
+
+      const shortName = this.playerShortName(player.name);
+      context.fillStyle = '#ffffff';
+      context.font = '600 13px Arial';
+      context.textAlign = 'center';
+      context.fillText(shortName, pointX, pointY + 32);
+      context.textAlign = 'start';
+    });
+  }
+
+  private drawRoundedRect(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    radius: number,
+    fillStyle: string | CanvasGradient,
+    strokeStyle: string
+  ): void {
+    const safeRadius = Math.min(radius, width / 2, height / 2);
+    context.beginPath();
+    context.moveTo(x + safeRadius, y);
+    context.lineTo(x + width - safeRadius, y);
+    context.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+    context.lineTo(x + width, y + height - safeRadius);
+    context.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
+    context.lineTo(x + safeRadius, y + height);
+    context.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+    context.lineTo(x, y + safeRadius);
+    context.quadraticCurveTo(x, y, x + safeRadius, y);
+    context.closePath();
+
+    context.fillStyle = fillStyle;
+    context.fill();
+    context.strokeStyle = strokeStyle;
+    context.lineWidth = 1.6;
+    context.stroke();
+  }
+
+  private canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+          return;
+        }
+        reject(new Error('Falha ao converter canvas para imagem.'));
+      }, 'image/png');
+    });
+  }
+
+  private async copyImageBlobToClipboard(blob: Blob): Promise<boolean> {
+    if (typeof navigator === 'undefined' || !navigator.clipboard || typeof ClipboardItem === 'undefined') {
+      return false;
+    }
+
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'image/png': blob
+        })
+      ]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private downloadImageBlob(blob: Blob, fileName: string): void {
+    const imageUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = imageUrl;
+    anchor.download = fileName;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(imageUrl), 1200);
   }
 
   private normalizePeladaPlayerImages(pelada: PeladaDetail): PeladaDetail {

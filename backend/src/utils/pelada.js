@@ -27,8 +27,8 @@ export function getParticipantIdSet(pelada) {
 }
 
 export function validateTeamsShape(teams) {
-  if (!Array.isArray(teams) || teams.length !== 4) {
-    return 'Uma pelada deve possuir exatamente 4 times.';
+  if (!Array.isArray(teams) || teams.length < 1 || teams.length > 4) {
+    return 'Uma pelada deve possuir entre 1 e 4 times.';
   }
 
   const usedPlayers = new Set();
@@ -49,8 +49,12 @@ export function validateTeamsShape(teams) {
 
     const guestPlayers = Array.isArray(team.guestPlayers) ? team.guestPlayers : [];
     const totalPlayers = team.players.length + guestPlayers.length;
-    if (totalPlayers !== 5) {
-      return `O time ${team.name} deve ter exatamente 5 jogadores (cadastrados + convidados).`;
+    if (totalPlayers < 1) {
+      return `O time ${team.name} precisa ter ao menos 1 jogador entre cadastrados e convidados.`;
+    }
+
+    if (totalPlayers > 5) {
+      return `O time ${team.name} pode ter no máximo 5 jogadores (cadastrados + convidados).`;
     }
 
     for (const guest of guestPlayers) {

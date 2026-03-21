@@ -5,6 +5,18 @@
   flex-wrap: wrap;
 }
 
+.teams-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.teams-section-header .panel-title {
+  margin-bottom: 0;
+}
+
 .racha-status-chip {
   background: linear-gradient(90deg, #ffe4cf, #ffd8bb);
   color: #c2410c;
@@ -574,11 +586,34 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 10px;
+  align-items: start;
 }
 
 .team-editor {
   display: grid;
   gap: 8px;
+  align-content: start;
+  height: 100%;
+}
+
+.team-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.team-editor-header h3 {
+  margin: 0;
+}
+
+.team-grid-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .guest-editor {
@@ -598,34 +633,20 @@
   flex-wrap: wrap;
 }
 
-.guest-rows {
-  display: grid;
-  gap: 8px;
-}
-
-.guest-row {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fffdfd;
-  padding: 8px;
-  display: grid;
-  gap: 8px;
-}
-
-.guest-row-fields {
+.guest-add-row {
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
   align-items: start;
 }
 
-.guest-row-fields .mat-mdc-form-field {
+.guest-add-row .mat-mdc-form-field {
   width: 100%;
 }
 
-.guest-remove-btn {
-  justify-self: end;
-  min-width: 108px;
+.guest-add-row button {
+  width: 100%;
+  align-self: stretch;
 }
 
 .selected-players-box {
@@ -633,10 +654,15 @@
   border-radius: 10px;
   padding: 8px;
   background: #fff;
+  min-height: 86px;
 }
 
 .selected-players-box .mat-mdc-chip-set {
   margin-top: 6px;
+}
+
+.selected-players-box .guest-chip {
+  background: #f3e8ff;
 }
 
 .results-form {
@@ -1094,17 +1120,20 @@ h3 {
     justify-content: flex-start;
   }
 
-  .guest-row {
+  .guest-add-row {
     grid-template-columns: 1fr;
   }
 
-  .guest-row-fields {
-    grid-template-columns: 1fr;
-  }
-
-  .guest-remove-btn {
+  .guest-add-row button {
     width: 100%;
-    justify-self: stretch;
+  }
+
+  .team-grid-toolbar {
+    align-items: stretch;
+  }
+
+  .team-grid-toolbar button {
+    width: 100%;
   }
 
   .player-search-field {
