@@ -582,6 +582,84 @@
   gap: 12px;
 }
 
+.draw-panel {
+  border: 1px dashed #d8c2fb;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: linear-gradient(160deg, #f7efff, #fff3e8);
+  display: grid;
+  gap: 10px;
+}
+
+.draw-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.draw-form {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.draw-guest-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 132px 144px auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.draw-guest-row .mat-mdc-form-field {
+  width: 100%;
+}
+
+.draw-guest-row button {
+  min-height: 56px;
+}
+
+.draw-guest-list {
+  grid-column: 1 / -1;
+  border: 1px dashed #e1cdfd;
+  border-radius: 10px;
+  padding: 8px;
+  background: #fff;
+}
+
+.draw-submit-button {
+  min-height: 56px;
+}
+
+.draw-summary {
+  border: 1px solid #ead7ff;
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.draw-balance-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.draw-teams-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.draw-team-card {
+  padding: 8px;
+  display: grid;
+}
+
 .team-form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -1093,6 +1171,22 @@ h3 {
   .rating-grid,
   .vote-audit-grid {
     grid-template-columns: 1fr;
+  }
+
+  .draw-form {
+    grid-template-columns: 1fr;
+  }
+
+  .draw-guest-row {
+    grid-template-columns: 1fr;
+  }
+
+  .draw-guest-row button,
+  .draw-submit-button {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    width: 100%;
+    min-height: 46px;
   }
 
   .presence-config-form {

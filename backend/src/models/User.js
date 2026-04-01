@@ -131,6 +131,12 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    refreshTokenHash: {
+      type: String
+    },
+    refreshTokenExpiresAt: {
+      type: Date
+    },
     pushSubscriptions: [pushSubscriptionSchema]
   },
   {
@@ -144,6 +150,8 @@ userSchema.set('toJSON', {
     delete ret._id;
     delete ret.__v;
     delete ret.passwordHash;
+    delete ret.refreshTokenHash;
+    delete ret.refreshTokenExpiresAt;
     delete ret.pushSubscriptions;
     return ret;
   }

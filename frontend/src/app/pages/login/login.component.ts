@@ -40,7 +40,14 @@ export class LoginComponent {
     private readonly authService: AuthService,
     private readonly router: Router,
     private readonly snackBar: MatSnackBar
-  ) {}
+  ) {
+    const authNotice = this.authService.consumeAuthNotice();
+    if (authNotice) {
+      this.snackBar.open(authNotice, 'Fechar', {
+        duration: 3200
+      });
+    }
+  }
 
   submit(): void {
     if (this.form.invalid || this.loading) {

@@ -8,6 +8,7 @@ import {
   generateDoubleRoundRobinMatches,
   syncTeamResultsFromMatches
 } from '../utils/tournament.js';
+import { drawBalancedTeams } from '../utils/team-draw.js';
 import { sendPushNotificationToUsers } from '../utils/push-notification.js';
 import { canRequesterSeeRatings } from '../utils/user-visibility.js';
 
@@ -396,6 +397,135 @@ export async function peladaRoutes(fastify) {
       craquePodium
     };
   });
+
+  fastify.patch(
+    '/:id/teams/draw',
+    {
+      preHandler: [authenticate, authorize('ADM')]
+    },
+    async (request, reply) => {
+      const { playerIds, teamCount, guestPlayers } = request.body || {};
+      if (!Array.isArray(playerIds)) {
+        return reply.code(400).send({ message: 'Informe a lista de jogadores para o sorteio.' });
+      }
+      if (guestPlayers !== undefined && !Array.isArray(guestPlayers)) {
+        return reply.code(400).send({ message: 'A lista de convidados do sorteio deve ser um array.' });
+      }
+
+      const parsedTeamCount = Number(teamCount);
+      if (!Number.isInteger(parsedTeamCount) || parsedTeamCount < 2 || parsedTeamCount > 4) {
+        return reply.code(400).send({ message: 'O sorteio deve ter entre 2 e 4 times.' });
+      }
+
+      const normalizedPlayerIds = playerIds
+        .map((playerId) => String(playerId || '').trim())
+        .filter(Boolean);
+      const uniquePlayerIds = Array.from(new Set(normalizedPlayerIds));
+      if (uniquePlayerIds.length !== normalizedPlayerIds.length) {
+        return reply
+          .code(400)
+          .send({ message: 'Um mesmo jogador nao pode ser informado duas vezes no sorteio.' });
+      }
+
+      const validPositions = new Set(['ZAGUEIRO', 'MEIA', 'ATACANTE']);
+      let normalizedGuestPlayers = [];
+      try {
+        normalizedGuestPlayers = (guestPlayers || []).map((guest, index) => {
+          const guestName = String(guest?.name || '')
+            .trim()
+            .replace(/\s+/g, ' ');
+          const guestRating = Number(guest?.rating);
+          const normalizedPosition = String(guest?.position || '')
+            .trim()
+            .toUpperCase();
+
+          if (!guestName) {
+            throw new Error(`Informe o nome do convidado ${index + 1} no sorteio.`);
+          }
+          if (!Number.isFinite(guestRating) || guestRating < 1 || guestRating > 5) {
+            throw new Error(`A nota do convidado ${guestName} deve estar entre 1 e 5.`);
+          }
+          if (normalizedPosition && !validPositions.has(normalizedPosition)) {
+            throw new Error(
+              `A posição do convidado ${guestName} é inválida. Use ZAGUEIRO, MEIA ou ATACANTE.`
+            );
+          }
+
+          return {
+            id: `guest-${index + 1}-${Date.now()}`,
+            name: guestName,
+            rating: Number(guestRating.toFixed(2)),
+            position: normalizedPosition || null,
+            isGuest: true
+          };
+        });
+      } catch (error) {
+        return reply.code(400).send({ message: error.message || 'Dados inválidos nos convidados do sorteio.' });
+      }
+
+      if (uniquePlayerIds.length + normalizedGuestPlayers.length === 0) {
+        return reply.code(400).send({ message: 'Selecione ao menos 1 jogador ou convidado para o sorteio.' });
+      }
+
+      const pelada = await Pelada.findById(request.params.id);
+      if (!pelada) {
+        return reply.code(404).send({ message: 'Pelada nao encontrada.' });
+      }
+      if (!ensureEditableRacha(pelada, reply)) {
+        return;
+      }
+
+      const players = await User.find(
+        {
+          _id: { $in: uniquePlayerIds },
+          role: 'JOGADOR',
+          $or: [{ approvalStatus: 'APPROVED' }, { approvalStatus: { $exists: false } }]
+        },
+        'name ratingAverage initialRating position'
+      ).lean();
+
+      if (players.length !== uniquePlayerIds.length) {
+        return reply.code(400).send({
+          message: 'Um ou mais jogadores informados não existem, não são JOGADOR ou não estão aprovados.'
+        });
+      }
+
+      const playersById = new Map(players.map((player) => [String(player._id), player]));
+      const orderedPlayers = uniquePlayerIds.map((playerId) => playersById.get(playerId)).filter(Boolean);
+
+      let drawResult;
+      try {
+        const registeredDrawPlayers = orderedPlayers.map((player) => ({
+          id: String(player._id),
+          name: player.name,
+          rating:
+            Number.isFinite(Number(player.ratingAverage)) && Number(player.ratingAverage) > 0
+              ? Number(player.ratingAverage)
+              : Number(player.initialRating || 3),
+          position: player.position || null,
+          isGuest: false
+        }));
+
+        drawResult = drawBalancedTeams(
+          [...registeredDrawPlayers, ...normalizedGuestPlayers],
+          parsedTeamCount,
+          {
+            maxPlayersPerTeam: 5
+          }
+        );
+      } catch (error) {
+        return reply.code(400).send({ message: error.message || 'Nao foi possivel gerar o sorteio.' });
+      }
+
+      return {
+        message: 'Sorteio equilibrado gerado com sucesso.',
+        teamCount: parsedTeamCount,
+        selectedPlayers: uniquePlayerIds.length + normalizedGuestPlayers.length,
+        teams: drawResult.teams,
+        balance: drawResult.balance
+      };
+    }
+  );
 
   fastify.patch(
     '/:id/teams',

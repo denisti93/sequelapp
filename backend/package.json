@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "seed:admin": "node src/scripts/seed-admin.js"
+    "seed:admin": "node src/scripts/seed-admin.js",
+    "sync:prod-to-local": "node src/scripts/sync-prod-to-local.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1010.0",

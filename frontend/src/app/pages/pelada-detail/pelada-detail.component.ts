@@ -28,6 +28,7 @@ import { toPlayerDisplayName } from '../../shared/utils/player-name';
 import {
   CraqueVoteSelection,
   PeladaDetail,
+  TeamsDrawResponse,
   PeladaGuestPlayer,
   PlayerPosition,
   PresenceEntry,
@@ -52,6 +53,20 @@ interface TeamFieldLayout {
   defense: TeamFieldPlayer[];
   midfield: TeamFieldPlayer[];
   attack: TeamFieldPlayer[];
+}
+
+interface DrawGuestPlayer {
+  id: string;
+  name: string;
+  rating: number;
+  position: PlayerPosition;
+}
+
+interface DrawSelectedRegisteredPlayer {
+  id: string;
+  name: string;
+  position: string;
+  rating: string;
 }
 
 function maxLengthArrayValidator(length: number) {
@@ -110,6 +125,8 @@ export class PeladaDetailComponent implements OnInit {
   adminVoteSelections: Record<string, number> = {};
   tournamentRoundGroups: Array<{ round: number; matchIndexes: number[] }> = [];
   playerStatsSearchTerm = '';
+  lastDrawResult: TeamsDrawResponse | null = null;
+  drawGuestPlayers: DrawGuestPlayer[] = [];
   readonly guestPositionOptions: Array<{ value: PlayerPosition; label: string }> = [
     { value: 'ZAGUEIRO', label: 'Zagueiro' },
     { value: 'MEIA', label: 'Meia' },
@@ -138,6 +155,14 @@ export class PeladaDetailComponent implements OnInit {
     openAt: ['', [Validators.required]]
   });
 
+  readonly drawTeamsForm = this.formBuilder.group({
+    teamCount: [4, [Validators.required, Validators.min(2), Validators.max(this.maxTeamsPerRacha)]],
+    playerIds: [[] as string[]],
+    guestNameDraft: [''],
+    guestRatingDraft: [3, [Validators.required, Validators.min(1), Validators.max(5)]],
+    guestPositionDraft: ['MEIA', [Validators.required]]
+  });
+
   constructor(
     private readonly route: ActivatedRoute,
     private readonly formBuilder: UntypedFormBuilder,
@@ -161,6 +186,85 @@ export class PeladaDetailComponent implements OnInit {
 
   get tournamentMatchesArray(): UntypedFormArray {
     return this.tournamentForm.get('matches') as UntypedFormArray;
+  }
+
+  get drawTeamCount(): number {
+    const raw = Number(this.drawTeamsForm.get('teamCount')?.value || 4);
+    if (!Number.isInteger(raw)) {
+      return 4;
+    }
+    return Math.min(this.maxTeamsPerRacha, Math.max(2, raw));
+  }
+
+  get drawSelectedPlayerIds(): string[] {
+    const value = this.drawTeamsForm.get('playerIds')?.value;
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value.map((playerId) => String(playerId));
+  }
+
+  get maxDrawPlayersCount(): number {
+    return this.drawTeamCount * this.maxPlayersPerTeam;
+  }
+
+  get selectedDrawPlayersCount(): number {
+    return this.drawSelectedPlayerIds.length;
+  }
+
+  get drawGuestPlayersCount(): number {
+    return this.drawGuestPlayers.length;
+  }
+
+  get drawPoolCount(): number {
+    return this.selectedDrawPlayersCount + this.drawGuestPlayersCount;
+  }
+
+  get canAddDrawGuestPlayer(): boolean {
+    return this.drawPoolCount < this.maxDrawPlayersCount;
+  }
+
+  get drawAvailableSlots(): number {
+    return Math.max(this.maxDrawPlayersCount - this.drawPoolCount, 0);
+  }
+
+  get drawMissingPlayersCount(): number {
+    return Math.max(this.drawTeamCount - this.drawPoolCount, 0);
+  }
+
+  get canSubmitDraw(): boolean {
+    return this.drawPoolCount >= this.drawTeamCount && this.drawPoolCount <= this.maxDrawPlayersCount;
+  }
+
+  get drawPoolProgressValue(): number {
+    if (this.maxDrawPlayersCount <= 0) {
+      return 0;
+    }
+    return Math.round((this.drawPoolCount / this.maxDrawPlayersCount) * 100);
+  }
+
+  get drawSelectedRegisteredPlayers(): DrawSelectedRegisteredPlayer[] {
+    const usersById = new Map(this.users.map((user) => [String(user.id), user]));
+    return this.drawSelectedPlayerIds
+      .map((playerId) => {
+        const user = usersById.get(String(playerId));
+        if (!user) {
+          return null;
+        }
+        const rating =
+          typeof user.ratingAverage === 'number' && Number.isFinite(user.ratingAverage)
+            ? user.ratingAverage.toFixed(2).replace('.', ',')
+            : '--';
+
+        return {
+          id: String(user.id),
+          name: toPlayerDisplayName(user.name),
+          position: this.drawPlayerPositionLabel(user.position),
+          rating
+        };
+      })
+      .filter((item): item is DrawSelectedRegisteredPlayer => Boolean(item))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   get filteredStatsIndexes(): number[] {
@@ -294,8 +398,10 @@ export class PeladaDetailComponent implements OnInit {
       next: ({ pelada, users, rating, votes }) => {
         this.pelada = this.normalizePeladaPlayerImages(pelada);
         this.users = users;
+        this.lastDrawResult = null;
 
         this.buildTeamForm(pelada);
+        this.syncDrawFormWithCurrentTeams(pelada);
         this.buildResultsForm(pelada);
         this.buildStatsForm(pelada);
         this.buildTournamentForm(pelada);
@@ -349,6 +455,214 @@ export class PeladaDetailComponent implements OnInit {
       name: [guest?.name || '', [Validators.required]],
       position: [guest?.position || 'MEIA', [Validators.required]]
     });
+  }
+
+  private syncDrawFormWithCurrentTeams(pelada: PeladaDetail): void {
+    const currentSelectedIds = this.drawSelectedPlayerIds;
+    const allUserIds = new Set(this.users.map((user) => String(user.id)));
+    const teamPlayerIds = Array.from(
+      new Set((pelada.teams || []).flatMap((team) => (team.players || []).map((player) => String(player.id))))
+    );
+    const teamGuestPlayers = (pelada.teams || []).flatMap((team) => team.guestPlayers || []);
+
+    const validCurrentSelection = currentSelectedIds.filter((playerId) => allUserIds.has(playerId));
+    const nextPlayerIds = teamPlayerIds.length > 0 ? teamPlayerIds : validCurrentSelection;
+    const nextTeamCount =
+      teamPlayerIds.length > 0
+        ? Math.min(this.maxTeamsPerRacha, Math.max(2, (pelada.teams || []).length))
+        : this.drawTeamCount;
+    const maxPlayersByTeamCount = nextTeamCount * this.maxPlayersPerTeam;
+
+    this.drawGuestPlayers =
+      teamGuestPlayers.length > 0
+        ? teamGuestPlayers.slice(0, maxPlayersByTeamCount).map((guest, index) => ({
+            id: `team-guest-${index + 1}`,
+            name: String(guest?.name || '').trim(),
+            rating: 3,
+            position: (guest?.position as PlayerPosition) || 'MEIA'
+          }))
+        : [];
+
+    const availableRegisteredSlots = Math.max(maxPlayersByTeamCount - this.drawGuestPlayers.length, 0);
+
+    this.drawTeamsForm.patchValue(
+      {
+        teamCount: nextTeamCount,
+        playerIds: nextPlayerIds.slice(0, availableRegisteredSlots),
+        guestNameDraft: '',
+        guestRatingDraft: 3,
+        guestPositionDraft: 'MEIA'
+      },
+      { emitEvent: false }
+    );
+  }
+
+  onDrawTeamCountChanged(): void {
+    const maxPlayers = this.maxDrawPlayersCount;
+    let changed = false;
+
+    if (this.drawGuestPlayers.length > maxPlayers) {
+      this.drawGuestPlayers = this.drawGuestPlayers.slice(0, maxPlayers);
+      changed = true;
+    }
+
+    const allowedRegisteredPlayers = Math.max(maxPlayers - this.drawGuestPlayers.length, 0);
+    const selectedIds = this.drawSelectedPlayerIds;
+    if (selectedIds.length > allowedRegisteredPlayers) {
+      this.drawTeamsForm
+        .get('playerIds')
+        ?.setValue(selectedIds.slice(0, allowedRegisteredPlayers), { emitEvent: false });
+      changed = true;
+    }
+
+    if (changed) {
+      this.snackBar.open(
+        `Com ${this.drawTeamCount} times, o sorteio aceita no máximo ${maxPlayers} atletas no total.`,
+        'Fechar',
+        {
+          duration: 3200
+        }
+      );
+    }
+  }
+
+  isDrawPlayerDisabled(playerId: string): boolean {
+    const selected = this.drawSelectedPlayerIds;
+    const normalizedId = String(playerId);
+    if (selected.includes(normalizedId)) {
+      return false;
+    }
+    return this.drawPoolCount >= this.maxDrawPlayersCount;
+  }
+
+  drawPlayerPositionLabel(position?: PlayerPosition): string {
+    if (position === 'ZAGUEIRO') return 'ZAG';
+    if (position === 'MEIA') return 'MEI';
+    if (position === 'ATACANTE') return 'ATA';
+    return 'SEM POS';
+  }
+
+  drawPlayerMeta(user: User): string {
+    const position = this.drawPlayerPositionLabel(user.position);
+    const rating =
+      typeof user.ratingAverage === 'number' && Number.isFinite(user.ratingAverage)
+        ? user.ratingAverage.toFixed(2).replace('.', ',')
+        : '--';
+
+    return `${position} • nota ${rating}`;
+  }
+
+  addDrawGuestPlayer(): void {
+    if (this.actionLoading || this.isConcluded) {
+      return;
+    }
+
+    if (!this.canAddDrawGuestPlayer) {
+      this.snackBar.open(
+        `Limite do sorteio atingido para ${this.drawTeamCount} times (${this.maxDrawPlayersCount} atletas).`,
+        'Fechar',
+        {
+          duration: 3000
+        }
+      );
+      return;
+    }
+
+    const guestNameControl = this.drawTeamsForm.get('guestNameDraft');
+    const guestRatingControl = this.drawTeamsForm.get('guestRatingDraft');
+    const guestPositionControl = this.drawTeamsForm.get('guestPositionDraft');
+
+    const guestName = String(guestNameControl?.value || '')
+      .trim()
+      .replace(/\s+/g, ' ');
+    const guestRating = Number(guestRatingControl?.value);
+    const guestPosition = String(guestPositionControl?.value || '')
+      .trim()
+      .toUpperCase() as PlayerPosition;
+
+    if (!guestName) {
+      guestNameControl?.markAsTouched();
+      this.snackBar.open('Digite o nome do convidado para o sorteio.', 'Fechar', {
+        duration: 2600
+      });
+      return;
+    }
+
+    if (!Number.isFinite(guestRating) || guestRating < 1 || guestRating > 5) {
+      guestRatingControl?.markAsTouched();
+      this.snackBar.open('A nota do convidado deve ficar entre 1 e 5.', 'Fechar', {
+        duration: 2600
+      });
+      return;
+    }
+
+    const validPositions: PlayerPosition[] = ['ZAGUEIRO', 'MEIA', 'ATACANTE'];
+    if (!validPositions.includes(guestPosition)) {
+      guestPositionControl?.markAsTouched();
+      this.snackBar.open('Selecione uma posição válida para o convidado.', 'Fechar', {
+        duration: 2600
+      });
+      return;
+    }
+
+    this.drawGuestPlayers.push({
+      id: `draw-guest-${Date.now()}-${Math.round(Math.random() * 100000)}`,
+      name: guestName,
+      rating: Number(guestRating.toFixed(2)),
+      position: guestPosition
+    });
+
+    guestNameControl?.setValue('', { emitEvent: false });
+    guestRatingControl?.setValue(3, { emitEvent: false });
+    guestPositionControl?.setValue('MEIA', { emitEvent: false });
+  }
+
+  removeDrawGuestPlayer(guestId: string): void {
+    if (this.actionLoading || this.isConcluded) {
+      return;
+    }
+
+    this.drawGuestPlayers = this.drawGuestPlayers.filter((guest) => guest.id !== String(guestId));
+  }
+
+  removeDrawRegisteredPlayer(playerId: string): void {
+    if (this.actionLoading || this.isConcluded) {
+      return;
+    }
+
+    const normalizedId = String(playerId);
+    const nextSelection = this.drawSelectedPlayerIds.filter((item) => String(item) !== normalizedId);
+    this.drawTeamsForm.get('playerIds')?.setValue(nextSelection, { emitEvent: false });
+  }
+
+  clearDrawPool(): void {
+    if (this.actionLoading || this.isConcluded) {
+      return;
+    }
+
+    this.drawTeamsForm.patchValue(
+      {
+        playerIds: [],
+        guestNameDraft: '',
+        guestRatingDraft: 3,
+        guestPositionDraft: 'MEIA'
+      },
+      { emitEvent: false }
+    );
+    this.drawGuestPlayers = [];
+    this.lastDrawResult = null;
+  }
+
+  drawGuestChipLabel(guest: DrawGuestPlayer): string {
+    const labelPosition = this.drawPlayerPositionLabel(guest.position);
+    const labelRating = Number(guest.rating || 0).toFixed(2).replace('.', ',');
+    return `${toPlayerDisplayName(guest.name)} • ${labelPosition} • nota ${labelRating}`;
+  }
+
+  drawTeamPlayersPreview(team: TeamsDrawResponse['teams'][number]): string {
+    return (team.players || [])
+      .map((player) => `${toPlayerDisplayName(player.name)}${player.isGuest ? ' (Convidado)' : ''}`)
+      .join(', ');
   }
 
   addTeamSlot(): void {
@@ -689,6 +1003,7 @@ export class PeladaDetailComponent implements OnInit {
       this.statsForm.disable({ emitEvent: false });
       this.tournamentForm.disable({ emitEvent: false });
       this.presenceConfigForm.disable({ emitEvent: false });
+      this.drawTeamsForm.disable({ emitEvent: false });
       return;
     }
 
@@ -696,6 +1011,7 @@ export class PeladaDetailComponent implements OnInit {
     this.resultsForm.enable({ emitEvent: false });
     this.statsForm.enable({ emitEvent: false });
     this.tournamentForm.enable({ emitEvent: false });
+    this.drawTeamsForm.enable({ emitEvent: false });
 
     if (this.canConfigurePresence) {
       this.presenceConfigForm.enable({ emitEvent: false });
@@ -764,6 +1080,115 @@ export class PeladaDetailComponent implements OnInit {
     }
 
     return 'Jogador removido';
+  }
+
+  drawTeams(): void {
+    if (!this.ensureNotConcluded()) {
+      return;
+    }
+
+    if (!this.authService.isAdmin || this.actionLoading || !this.pelada) {
+      return;
+    }
+
+    const selectedIds = this.drawSelectedPlayerIds;
+    const uniqueSelectedIds = Array.from(new Set(selectedIds));
+    const guestPlayers = this.drawGuestPlayers.map((guest) => ({
+      name: String(guest.name || '')
+        .trim()
+        .replace(/\s+/g, ' '),
+      rating: Number(guest.rating),
+      position: guest.position
+    }));
+    const teamCount = this.drawTeamCount;
+    const maxAllowedPlayers = teamCount * this.maxPlayersPerTeam;
+    const totalSelected = uniqueSelectedIds.length + guestPlayers.length;
+
+    if (uniqueSelectedIds.length !== selectedIds.length) {
+      this.snackBar.open('Selecione cada jogador apenas uma vez para o sorteio.', 'Fechar', {
+        duration: 2600
+      });
+      return;
+    }
+
+    if (totalSelected < teamCount) {
+      this.snackBar.open(`Selecione pelo menos ${teamCount} atletas para formar os times.`, 'Fechar', {
+        duration: 2800
+      });
+      return;
+    }
+
+    if (totalSelected > maxAllowedPlayers) {
+      this.snackBar.open(
+        `Com ${teamCount} times, o limite do sorteio é ${maxAllowedPlayers} atletas.`,
+        'Fechar',
+        { duration: 3000 }
+      );
+      return;
+    }
+
+    this.actionLoading = true;
+    this.peladaService
+      .drawBalancedTeams(this.peladaId, {
+        playerIds: uniqueSelectedIds,
+        teamCount,
+        guestPlayers
+      })
+      .subscribe({
+        next: (response) => {
+          this.lastDrawResult = response;
+          this.applyDrawnTeamsToForm(response);
+          this.actionLoading = false;
+          this.snackBar.open('Times sorteados com equilíbrio de nota e posição. Revise e clique em Salvar times.', 'Fechar', {
+            duration: 3800
+          });
+        },
+        error: (error) => {
+          this.actionLoading = false;
+          this.snackBar.open(error?.error?.message || 'Falha ao sortear times.', 'Fechar', {
+            duration: 3200
+          });
+        }
+      });
+  }
+
+  private applyDrawnTeamsToForm(drawResult: TeamsDrawResponse): void {
+    this.teamsArray.clear();
+    const registeredUserIds = new Set(this.users.map((user) => String(user.id)));
+
+    for (const team of drawResult.teams || []) {
+      const teamGroup = this.createTeamGroup();
+      const guestsArray = teamGroup.get('guestPlayers') as UntypedFormArray;
+      guestsArray.clear();
+
+      const registeredPlayers: string[] = [];
+      for (const player of team.players || []) {
+        const isGuest = Boolean(player.isGuest) || !registeredUserIds.has(String(player.id));
+        if (isGuest) {
+          guestsArray.push(
+            this.createGuestPlayerGroup({
+              name: String(player.name || '').trim(),
+              position: (player.position as PlayerPosition) || 'MEIA'
+            })
+          );
+          continue;
+        }
+
+        registeredPlayers.push(String(player.id));
+      }
+
+      teamGroup.patchValue(
+        {
+          players: registeredPlayers,
+          goalkeepersText: ''
+        },
+        { emitEvent: false }
+      );
+
+      this.teamsArray.push(teamGroup);
+    }
+
+    this.normalizeTeamSelections();
   }
 
   saveTeams(): void {

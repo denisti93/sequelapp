@@ -182,3 +182,36 @@ export interface VoteDetailsResponse {
   votingStatus: VotingStatus;
   votes: VoteDetail[];
 }
+
+export interface DrawTeamPlayer {
+  id: string;
+  name: string;
+  position: PlayerPosition | null;
+  isGuest?: boolean;
+  rating?: number;
+}
+
+export interface DrawTeamResult {
+  name: string;
+  players: DrawTeamPlayer[];
+  totalRating: number;
+  averageRating: number;
+  positionCounts: {
+    ZAGUEIRO: number;
+    MEIA: number;
+    ATACANTE: number;
+    FLEX: number;
+  };
+}
+
+export interface TeamsDrawResponse {
+  message: string;
+  teamCount: number;
+  selectedPlayers: number;
+  teams: DrawTeamResult[];
+  balance: {
+    minAverageRating: number;
+    maxAverageRating: number;
+    spread: number;
+  };
+}

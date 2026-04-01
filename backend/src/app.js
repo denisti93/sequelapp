@@ -14,11 +14,14 @@ export function buildApp() {
   });
 
   app.decorate('config', {
-    jwtExpiresIn: env.jwtExpiresIn
+    jwtAccessExpiresIn: env.jwtAccessExpiresIn,
+    jwtRefreshExpiresIn: env.jwtRefreshExpiresIn,
+    authRefreshCookieName: env.authRefreshCookieName
   });
 
   app.register(cors, {
-    origin: true
+    origin: true,
+    credentials: true
   });
 
   app.register(fastifyJwt, {

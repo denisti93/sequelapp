@@ -6,6 +6,12 @@ export async function authenticate(request, reply) {
 
     const dbUser = await User.findById(request.user.id, 'role approvalStatus name username').lean();
     if (!dbUser) {
+      request.log.warn(
+        {
+          authUserId: request.user?.id
+        },
+        'Token JWT validado, mas o usuario nao foi encontrado no banco.'
+      );
       return reply.code(401).send({ message: 'Token invalido ou ausente.' });
     }
 
@@ -23,7 +29,15 @@ export async function authenticate(request, reply) {
       name: dbUser.name,
       username: dbUser.username
     };
-  } catch {
+  } catch (error) {
+    request.log.warn(
+      {
+        jwtErrorCode: error?.code,
+        jwtErrorName: error?.name,
+        jwtErrorMessage: error?.message
+      },
+      'Falha na validacao do token JWT.'
+    );
     return reply.code(401).send({ message: 'Token invalido ou ausente.' });
   }
 }

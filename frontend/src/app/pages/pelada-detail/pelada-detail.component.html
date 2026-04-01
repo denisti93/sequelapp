@@ -412,6 +412,176 @@
           Você pode salvar entre 1 e 4 times. Cada time pode ter até 5 jogadores somando cadastrados e convidados.
         </p>
 
+        <div class="draw-panel">
+          <div class="draw-panel-header">
+            <div>
+              <h3>Tira times (sorteio equilibrado)</h3>
+              <p class="muted">
+                1) Defina quantidade de times. 2) Escolha atletas (cadastrados e convidados). 3) Sorteie.
+              </p>
+            </div>
+            <span class="status-chip">
+              {{ drawPoolCount }}/{{ maxDrawPlayersCount }} atletas ({{ selectedDrawPlayersCount }} cad. +
+              {{ drawGuestPlayersCount }} conv.)
+            </span>
+          </div>
+          <mat-progress-bar mode="determinate" [value]="drawPoolProgressValue"></mat-progress-bar>
+          <div class="draw-balance-row">
+            @if (drawMissingPlayersCount > 0) {
+              <span class="status-chip">
+                Faltam {{ drawMissingPlayersCount }} atleta(s) para formar {{ drawTeamCount }} time(s)
+              </span>
+            } @else {
+              <span class="status-chip success">Pronto para sortear</span>
+            }
+            <span class="status-chip">Vagas restantes: {{ drawAvailableSlots }}</span>
+            @if (drawPoolCount > maxDrawPlayersCount) {
+              <span class="status-chip">Ajuste a seleção para o limite do sorteio</span>
+            }
+          </div>
+
+          <form [formGroup]="drawTeamsForm" class="draw-form" (ngSubmit)="drawTeams()">
+            <mat-form-field appearance="outline" class="draw-team-count-field">
+              <mat-label>Qtd. de times</mat-label>
+              <mat-select formControlName="teamCount" (valueChange)="onDrawTeamCountChanged()">
+                <mat-option [value]="2">2</mat-option>
+                <mat-option [value]="3">3</mat-option>
+                <mat-option [value]="4">4</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="draw-players-field">
+              <mat-label>Jogadores para o sorteio</mat-label>
+              <mat-select formControlName="playerIds" multiple>
+                @for (user of users; track user.id) {
+                  <mat-option [value]="user.id" [disabled]="isDrawPlayerDisabled(user.id)">
+                    <span class="draw-option-name">{{ user.name | playerName }}</span>
+                    <small class="draw-option-meta">{{ drawPlayerMeta(user) }}</small>
+                  </mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <div class="draw-guest-row">
+              <mat-form-field appearance="outline" class="draw-guest-name-field">
+                <mat-label>Convidado (nome)</mat-label>
+                <input matInput formControlName="guestNameDraft" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="draw-guest-position-field">
+                <mat-label>Posição</mat-label>
+                <mat-select formControlName="guestPositionDraft">
+                  @for (positionOption of guestPositionOptions; track positionOption.value) {
+                    <mat-option [value]="positionOption.value">{{ positionOption.label }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="draw-guest-rating-field">
+                <mat-label>Nota média (1-5)</mat-label>
+                <input matInput type="number" min="1" max="5" step="0.1" formControlName="guestRatingDraft" />
+              </mat-form-field>
+
+              <button
+                mat-stroked-button
+                color="primary"
+                type="button"
+                (click)="addDrawGuestPlayer()"
+                [disabled]="actionLoading || isConcluded || !canAddDrawGuestPlayer"
+              >
+                <mat-icon>person_add</mat-icon>
+                Adicionar convidado
+              </button>
+            </div>
+
+            @if (drawSelectedRegisteredPlayers.length > 0) {
+              <div class="draw-guest-list">
+                <small class="muted">Jogadores cadastrados selecionados</small>
+                <mat-chip-set>
+                  @for (player of drawSelectedRegisteredPlayers; track player.id) {
+                    <mat-chip
+                      [removable]="!actionLoading && !isConcluded"
+                      (removed)="removeDrawRegisteredPlayer(player.id)"
+                    >
+                      {{ player.name }} • {{ player.position }} • nota {{ player.rating }}
+                      <button matChipRemove [attr.aria-label]="'Remover jogador ' + player.name">
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </mat-chip>
+                  }
+                </mat-chip-set>
+              </div>
+            }
+
+            @if (drawGuestPlayers.length > 0) {
+              <div class="draw-guest-list">
+                <small class="muted">Convidados adicionados</small>
+                <mat-chip-set>
+                  @for (guest of drawGuestPlayers; track guest.id) {
+                    <mat-chip
+                      class="guest-chip"
+                      [removable]="!actionLoading && !isConcluded"
+                      (removed)="removeDrawGuestPlayer(guest.id)"
+                    >
+                      {{ drawGuestChipLabel(guest) }}
+                      <button matChipRemove [attr.aria-label]="'Remover convidado ' + guest.name">
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </mat-chip>
+                  }
+                </mat-chip-set>
+              </div>
+            }
+
+            <div class="team-grid-toolbar" style="grid-column: 1 / -1">
+              <button
+                mat-button
+                type="button"
+                (click)="clearDrawPool()"
+                [disabled]="actionLoading || isConcluded || drawPoolCount === 0"
+              >
+                Limpar seleção do sorteio
+              </button>
+              <button
+                mat-flat-button
+                color="accent"
+                class="draw-submit-button"
+                type="submit"
+                [disabled]="actionLoading || isConcluded || !canSubmitDraw"
+              >
+                <mat-icon>shuffle</mat-icon>
+                Sortear times
+              </button>
+            </div>
+          </form>
+
+          @if (lastDrawResult) {
+            <div class="draw-summary">
+              <strong>Resultado do sorteio</strong>
+              <div class="draw-balance-row">
+                <span class="status-chip">Menor média: {{ lastDrawResult.balance.minAverageRating | number : '1.2-2' }}</span>
+                <span class="status-chip">Maior média: {{ lastDrawResult.balance.maxAverageRating | number : '1.2-2' }}</span>
+                <span class="status-chip success">Diferença: {{ lastDrawResult.balance.spread | number : '1.2-2' }}</span>
+              </div>
+
+              <div class="draw-teams-grid">
+                @for (team of lastDrawResult.teams; track team.name) {
+                  <div class="draw-team-card">
+                    <strong>{{ team.name }}</strong>
+                    <small>Média {{ team.averageRating | number : '1.2-2' }}</small>
+                    <small>
+                      {{ team.positionCounts.ZAGUEIRO }} ZAG · {{ team.positionCounts.MEIA }} MEI ·
+                      {{ team.positionCounts.ATACANTE }} ATA
+                    </small>
+                    <small class="muted">{{ drawTeamPlayersPreview(team) }}</small>
+                  </div>
+                }
+              </div>
+              <small class="muted">Se estiver ok, clique em "Salvar times".</small>
+            </div>
+          }
+        </div>
+
         <form [formGroup]="teamForm" class="page-grid" (ngSubmit)="saveTeams()">
           <div formArrayName="teams" class="team-form-grid">
             @for (teamCtrl of teamsArray.controls; track teamCtrl; let i = $index) {

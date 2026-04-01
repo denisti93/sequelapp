@@ -7,6 +7,7 @@ import {
   PeladaSummary,
   PlayerPosition,
   RatingCardsResponse,
+  TeamsDrawResponse,
   VoteDetailsResponse
 } from '../../models/pelada';
 
@@ -60,6 +61,21 @@ export class PeladaService {
     return this.http.patch<{ message: string }>(`${this.apiUrl}/peladas/${id}/teams`, {
       teams
     });
+  }
+
+  drawBalancedTeams(
+    id: string,
+    payload: {
+      playerIds: string[];
+      teamCount: number;
+      guestPlayers: Array<{
+        name: string;
+        rating: number;
+        position?: PlayerPosition | null;
+      }>;
+    }
+  ): Observable<TeamsDrawResponse> {
+    return this.http.patch<TeamsDrawResponse>(`${this.apiUrl}/peladas/${id}/teams/draw`, payload);
   }
 
   updateResults(id: string, results: TeamResultInput[]): Observable<{ message: string }> {
